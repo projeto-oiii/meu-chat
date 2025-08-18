@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meu Chat</title>
+  <link rel="stylesheet" href="style.css" />
+  <script type="module" src="script.js" defer></script>
+</head>
+<body>
+  <div id="app">
+    <!-- Login -->
+    <div id="login-container" class="container">
+      <h2>Entrar no Chat</h2>
+      <input type="text" id="username" placeholder="Digite seu nome" />
+      <button id="loginBtn">Entrar</button>
+    </div>
+
+    <!-- Chat -->
+    <div id="chat-container" class="container hidden">
+      <div id="sidebar">
+        <h3>Usuários</h3>
+        <ul id="user-list"></ul>
+
+        <h3>Grupos</h3>
+        <ul id="room-list"></ul>
+        <input type="text" id="newRoom" placeholder="Novo grupo..." />
+        <button id="createRoomBtn">Criar Grupo</button>
+      </div>
+
+      <div id="chat">
+        <h2 id="chat-title">Selecione um usuário ou grupo</h2>
+        <div id="messages"></div>
+        <div id="input-container">
+          <input type="text" id="messageInput" placeholder="Digite uma mensagem..." />
+          <button id="sendBtn">Enviar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
