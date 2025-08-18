@@ -2,26 +2,28 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Login - Meu Chat</title>
+  <title>Login</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="login-body">
-  <div class="login-container">
-    <div class="login-left">
-      <img src="https://cdn-icons-png.flaticon.com/512/747/747376.png" alt="Login" class="login-image">
-    </div>
-    <div class="login-right">
-      <h2>Login</h2>
-      <input type="email" id="loginEmail" placeholder="E-mail">
-      <input type="password" id="loginPassword" placeholder="Senha">
-      <button onclick="login()">Entrar</button>
-      <p>Ainda não tem conta? <a href="cadastro.html">Cadastre-se</a></p>
-    </div>
+<body>
+  <div class="container">
+    <h2>Login</h2>
+    <input type="text" id="entrada" placeholder="Usuário ou Telefone">
+    <button id="loginBtn">Entrar</button>
+    <p>Ainda não tem conta? <a href="cadastro.html">Cadastre-se</a></p>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js"></script>
-  <script src="app.js"></script>
+  <script type="module">
+    import { loginUsuario } from "./app.js";
+
+    document.getElementById("loginBtn").addEventListener("click", () => {
+      const entrada = document.getElementById("entrada").value.trim();
+      if (entrada) {
+        loginUsuario(entrada);
+      } else {
+        alert("Preencha usuário ou telefone!");
+      }
+    });
+  </script>
 </body>
 </html>

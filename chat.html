@@ -1,47 +1,24 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
   <title>Meu Chat</title>
-  <link rel="stylesheet" href="style.css" />
-  <script type="module" src="script.js" defer></script>
+  <link rel="stylesheet" href="style.css">
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 </head>
-<body class="chat-page">
-  <aside class="sidebar">
-    <div class="brand">💬 Meu Chat</div>
-
-    <div class="section">
-      <div class="section-header">Grupos</div>
-      <div class="row">
-        <input id="newGroupName" type="text" placeholder="Nome do grupo" />
-        <button id="createGroupBtn" class="small">Criar</button>
-      </div>
-      <ul id="groupsList" class="list"></ul>
-    </div>
-
-    <div class="section">
-      <div class="section-header">Usuários</div>
-      <ul id="usersList" class="list"></ul>
-    </div>
-
-    <button id="logoutBtn" class="danger full">Sair</button>
-  </aside>
-
-  <main class="chat">
-    <div class="chat-header">
-      <div>
-        <div id="chatTitle" class="title">Selecione um usuário ou grupo</div>
-        <div id="chatSubtitle" class="muted"></div>
-      </div>
-    </div>
-
-    <div id="messages" class="messages"></div>
-
-    <form id="messageForm" class="message-form" style="display:none;">
-      <input id="messageInput" type="text" placeholder="Digite uma mensagem" autocomplete="off" />
-      <button class="primary">Enviar</button>
+<body>
+  <div class="container">
+    <h2>Chat</h2>
+    <button id="logout">Sair</button>
+    <div id="messages"></div>
+    <form id="messageForm">
+      <input type="text" id="messageInput" placeholder="Digite sua mensagem..." required>
+      <button type="submit">Enviar</button>
     </form>
-  </main>
+  </div>
+  <script src="app.js"></script>
 </body>
 </html>
