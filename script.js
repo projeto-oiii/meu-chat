@@ -1,66 +1,88 @@
-// Import Firebase
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, getDocs, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-// Config Firebase
+// ======================
+// Configuração do Firebase
+// ======================
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
+  apiKey: "AIzaSyDFvYgca0_HRX0m_RSER0RgQ3LZDa6kaJ8",
   authDomain: "meu-chat-71046.firebaseapp.com",
   projectId: "meu-chat-71046",
-  storageBucket: "meu-chat-71046.appspot.com",
-  messagingSenderId: "637408192765",
-  appId: "1:637408192765:web:1cf46321e1d0709dc688fe"
+  storageBucket: "meu-chat-71046.firebasestorage.app",
+  messagingSenderId: "268291748548",
+  appId: "1:268291748548:web:4001f2e4002d7f0eeb8f91"
 };
 
-// Inicializar
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+// Inicializa o Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
-// Funções de tela (login ↔ cadastro)
-window.showRegister = () => {
-  document.getElementById("loginDiv").style.display = "none";
-  document.getElementById("registerDiv").style.display = "block";
-};
-window.showLogin = () => {
-  document.getElementById("loginDiv").style.display = "block";
-  document.getElementById("registerDiv").style.display = "none";
-};
+// ======================
+// Lógica de Login e Cadastro
+// ======================
+document.addEventListener("DOMContentLoaded", () => {
+  const loginForm = document.getElementById("login-form");
+  const signupForm = document.getElementById("signup-form");
 
-// Botões de login/cadastro
-document.getElementById("registerBtn")?.addEventListener("click", async () => {
-  const email = document.getElementById("registerEmail").value;
-  const senha = document.getElementById("registerPassword").value;
-  try {
-    await createUserWithEmailAndPassword(auth, email, senha);
-    alert("Cadastro realizado! Agora faça login.");
-    showLogin();
-  } catch (e) {
-    alert("Erro: " + e.message);
+  if (loginForm) {
+    loginForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const email = document.getElementById("login-email").value;
+      const password = document.getElementById("login-password").value;
+
+      auth.signInWithEmailAndPassword(email, password)
+        .then(() => {
+          // Redireciona para o chat
+          window.location.href = "chat.html";
+        })
+        .catch((error) => {
+          alert("Erro no login: " + error.message);
+        });
+    });
+  }
+
+  if (signupForm) {
+    signupForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const email = document.getElementById("signup-email").value;
+      const password = document.getElementById("signup-password").value;
+
+      auth.createUserWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+          const user = userCredential.user;
+          // Salva no Firestore
+          return db.collection("users").doc(user.uid).set({
+            email: user.email,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        })
+        .then(() => {
+          alert("Cadastro realizado com sucesso!");
+          window.location.href = "chat.html";
+        })
+        .catch((error) => {
+          alert("Erro no cadastro: " + error.message);
+        });
+    });
   }
 });
 
-document.getElementById("loginBtn")?.addEventListener("click", async () => {
-  const email = document.getElementById("loginEmail").value;
-  const senha = document.getElementById("loginPassword").value;
-  try {
-    await signInWithEmailAndPassword(auth, email, senha);
-    window.location = "chat.html"; // Redireciona
-  } catch (e) {
-    alert("Erro: " + e.message);
-  }
-});
+// ======================
+// Lógica do Chat (apenas quando estiver no chat.html)
+// ======================
+if (window.location.pathname.includes("chat.html")) {
+  const logoutBtn = document.getElementById("logout");
 
-// Logout
-document.getElementById("logoutBtn")?.addEventListener("click", async () => {
-  await signOut(auth);
-  window.location = "index.html";
-});
+  auth.onAuthStateChanged((user) => {
+    if (!user) {
+      // Se não estiver logado, volta para login
+      window.location.href = "index.html";
+    }
+  });
 
-// Garantir que só logado acessa o chat
-onAuthStateChanged(auth, (user) => {
-  if (window.location.pathname.includes("chat.html") && !user) {
-    window.location = "index.html"; // se não logado, volta pro login
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      auth.signOut().then(() => {
+        window.location.href = "index.html";
+      });
+    });
   }
-});
+}
