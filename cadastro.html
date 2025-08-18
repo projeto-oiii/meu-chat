@@ -6,29 +6,16 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
+  <div class="form-container">
     <h2>Cadastro</h2>
-    <input type="text" id="nome" placeholder="Nome completo">
-    <input type="text" id="usuario" placeholder="Nome de usuário">
-    <input type="text" id="telefone" placeholder="Telefone (DDD+número)">
-    <button id="cadastroBtn">Cadastrar</button>
+    <input type="text" id="nome" placeholder="Nome completo" required>
+    <input type="text" id="usuario" placeholder="Nome de usuário" required>
+    <input type="text" id="telefone" placeholder="Telefone (DDD+número)" required>
+    <input type="password" id="senha" placeholder="Senha" required>
+    <button onclick="cadastrar()">Cadastrar</button>
     <p>Já tem conta? <a href="index.html">Faça login</a></p>
   </div>
 
-  <script type="module">
-    import { cadastrarUsuario } from "./app.js";
-
-    document.getElementById("cadastroBtn").addEventListener("click", () => {
-      const nome = document.getElementById("nome").value.trim();
-      const usuario = document.getElementById("usuario").value.trim();
-      const telefone = document.getElementById("telefone").value.trim();
-
-      if (nome && usuario && telefone) {
-        cadastrarUsuario(nome, usuario, telefone);
-      } else {
-        alert("Preencha todos os campos!");
-      }
-    });
-  </script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
