@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Meu Chat</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="script.js" defer></script>
+</head>
+<body>
+  <div class="chat-container">
+    <aside>
+      <h3>Usuários</h3>
+      <ul id="usersList"></ul>
+
+      <h3>Grupos</h3>
+      <input type="text" id="newGroupName" placeholder="Novo grupo...">
+      <button id="createGroupBtn">Criar Grupo</button>
+      <ul id="groupsList"></ul>
+
+      <button id="logoutBtn">Sair</button>
+    </aside>
+
+    <main>
+      <h2 id="chatTitle">Selecione um usuário ou grupo</h2>
+      <div id="messages"></div>
+      <div id="messageInputArea" style="display:none;">
+        <input type="text" id="messageInput" placeholder="Digite uma mensagem">
+        <button id="sendMessageBtn">Enviar</button>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
