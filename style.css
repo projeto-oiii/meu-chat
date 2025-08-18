@@ -1,70 +1,81 @@
 body {
-  font-family: Arial, sans-serif;
-  background: #0d1117;
-  color: white;
   margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+.login-body {
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100vh;
+  background: linear-gradient(to right, #6a11cb, #2575fc);
 }
 
-.container {
-  background: #161b22;
-  padding: 20px;
-  border-radius: 10px;
-  width: 300px;
-  text-align: center;
-}
-
-.container input {
-  display: block;
-  width: 100%;
-  margin: 10px 0;
-  padding: 8px;
-}
-
-.container button {
-  background: #238636;
-  color: white;
-  border: none;
-  padding: 10px;
-  width: 100%;
-  cursor: pointer;
-}
-
-.chat-container {
+.login-container {
   display: flex;
-  height: 100vh;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  width: 800px;
+  max-width: 90%;
+}
+
+.login-left {
+  background: #6a11cb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  width: 40%;
+}
+
+.login-left img {
   width: 100%;
+  max-width: 200px;
 }
 
-aside {
-  width: 250px;
-  background: #161b22;
-  padding: 15px;
-}
-
-main {
-  flex: 1;
-  background: #0d1117;
+.login-right {
+  width: 60%;
+  padding: 40px;
   display: flex;
   flex-direction: column;
+  justify-content: center;
 }
 
-#messages {
-  flex: 1;
-  padding: 10px;
-  overflow-y: auto;
+.login-right h2 {
+  margin-bottom: 20px;
+  color: #333;
 }
 
-#messageInputArea {
-  display: flex;
-  padding: 10px;
-  background: #161b22;
+.login-right input {
+  margin-bottom: 15px;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 14px;
 }
-#messageInput {
-  flex: 1;
-  margin-right: 10px;
-  padding: 8px;
+
+.login-right button {
+  background: #6a11cb;
+  color: white;
+  border: none;
+  padding: 12px;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.login-right button:hover {
+  background: #2575fc;
+}
+
+.login-right p {
+  margin-top: 15px;
+  font-size: 14px;
+}
+
+.login-right a {
+  color: #6a11cb;
+  text-decoration: none;
 }
