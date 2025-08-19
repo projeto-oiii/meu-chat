@@ -52,21 +52,33 @@ const loginForm = document.getElementById("loginForm");
 if (loginForm) {
   loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const loginInput = document.getElementById("loginInput").value;
+    const loginInput = document.getElementById("loginInput").value.trim();
     const senhaLogin = document.getElementById("senhaLogin").value;
 
-    const q = query(collection(db, "users"),
-      where("usuario", "==", loginInput));
-    const q2 = query(collection(db, "users"),
-      where("telefone", "==", loginInput));
+    let userData = null;
 
+    // 1) tenta buscar por usuário (campo)
+    let q = query(collection(db, "users"), where("usuario", "==", loginInput));
     let resultado = await getDocs(q);
+
+    // 2) se não encontrar, busca por telefone
     if (resultado.empty) {
-      resultado = await getDocs(q2);
+      q = query(collection(db, "users"), where("telefone", "==", loginInput));
+      resultado = await getDocs(q);
     }
 
-    if (!resultado.empty) {
-      const userData = resultado.docs[0].data();
+    // 3) se ainda não encontrar, tenta buscar pelo ID do documento
+    if (resultado.empty) {
+      const docRef = doc(db, "users", loginInput);
+      const docSnap = await getDocs(query(collection(db, "users"), where("__name__", "==", loginInput)));
+      if (!docSnap.empty) {
+        userData = docSnap.docs[0].data();
+      }
+    } else {
+      userData = resultado.docs[0].data();
+    }
+
+    if (userData) {
       if (userData.senha === senhaLogin) {
         usuario = userData;
         localStorage.setItem("usuario", JSON.stringify(userData));
@@ -114,21 +126,19 @@ if (addChatBtn) {
 // Listar chats
 const chatList = document.getElementById("chatList");
 if (chatList && usuario) {
-  const q = query(collection(db, "chats"));
+  const q = query(collection(db, "chats"), where("membros", "array-contains", usuario.usuario));
   onSnapshot(q, (snapshot) => {
     chatList.innerHTML = "";
     snapshot.docs.forEach((docSnap) => {
       const dados = docSnap.data();
-      if (dados.membros.includes(usuario.usuario)) {
-        const li = document.createElement("li");
-        li.innerText = dados.membros.filter(m => m !== usuario.usuario)[0] || "Chat Geral";
-        li.addEventListener("click", () => {
-          chatAtivo = docSnap.id;
-          document.getElementById("chatAtivoNome").innerText = li.innerText;
-          carregarMensagens();
-        });
-        chatList.appendChild(li);
-      }
+      const li = document.createElement("li");
+      li.innerText = dados.membros.filter(m => m !== usuario.usuario)[0] || "Chat";
+      li.addEventListener("click", () => {
+        chatAtivo = docSnap.id;
+        document.getElementById("chatAtivoNome").innerText = li.innerText;
+        carregarMensagens();
+      });
+      chatList.appendChild(li);
     });
   });
 }

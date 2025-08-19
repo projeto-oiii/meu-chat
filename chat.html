@@ -2,37 +2,34 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Meu Chat</title>
+  <title>Chat - Meu Chat</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="chat-container">
-    <!-- Sidebar -->
     <div class="sidebar">
-      <div class="user-info">
+      <div class="sidebar-header">
         <span id="userNome"></span>
         <button id="logoutBtn">Sair</button>
       </div>
-      <div class="add-chat">
-        <input type="text" id="novoChatInput" placeholder="Adicionar amigo (usuário/telefone)">
+      <div class="novo-chat">
+        <input type="text" id="novoChatInput" placeholder="Usuário ou Telefone">
         <button id="addChatBtn">Adicionar</button>
       </div>
       <ul id="chatList"></ul>
     </div>
 
-    <!-- Área principal -->
-    <div class="chat-area">
+    <div class="chat-box">
       <div class="chat-header">
         <h3 id="chatAtivoNome">Selecione um chat</h3>
       </div>
       <div id="messagesContainer" class="messages"></div>
-      <form id="chatForm" class="chat-form">
+      <form id="chatForm" class="chat-input">
         <input type="text" id="mensagemInput" placeholder="Digite sua mensagem">
         <button type="submit">Enviar</button>
       </form>
     </div>
   </div>
-
   <script type="module" src="app.js"></script>
 </body>
 </html>
