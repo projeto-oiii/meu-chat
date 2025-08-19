@@ -1,54 +1,48 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Meu Chat — Conversas</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <title>Chat - Meu Chat</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="chat-container">
     <!-- Sidebar -->
-    <aside class="sidebar">
+    <div class="sidebar">
       <div class="sidebar-header">
-        <div class="me-info">
-          <div class="avatar" aria-hidden="true">🙂</div>
-          <div>
-            <div class="me-name" id="userNome">—</div>
-            <div class="muted tiny">logado</div>
-          </div>
-        </div>
-        <button id="logoutBtn" class="btn">Sair</button>
+        <span id="userNome"></span>
+        <button id="logoutBtn">Sair</button>
       </div>
 
       <div class="novo-chat">
-        <input type="text" id="novoChatInput" placeholder="Usuário ou Telefone" />
-        <button id="addChatBtn" class="btn primary">Adicionar</button>
+        <input type="text" id="novoChatInput" placeholder="Usuário ou Telefone">
+        <button id="addChatBtn">Adicionar</button>
       </div>
 
-      <ul id="chatList" class="chat-list"></ul>
-    </aside>
+      <ul id="chatList"></ul>
+    </div>
 
     <!-- Área do chat -->
-    <main class="chat-box">
-      <header class="chat-header">
-        <h3 id="chatAtivoNome" class="chat-title">Selecione um chat</h3>
+    <div class="chat-box">
+      <div class="chat-header">
+        <h3 id="chatAtivoNome">Selecione um chat</h3>
         <div class="header-right">
           <span id="presenceBadge" class="presence offline">off</span>
-          <button id="saveContactBtn" class="btn subtle" disabled>Salvar contato</button>
+          <button id="saveContactBtn" class="header-action" disabled>Salvar contato</button>
         </div>
-      </header>
+      </div>
 
-      <section id="messagesContainer" class="messages" aria-live="polite"></section>
+      <div id="messagesContainer" class="messages"></div>
       <div id="typingIndicator" class="typing" aria-live="polite"></div>
 
-      <form id="chatForm" class="chat-input" autocomplete="off">
-        <input type="text" id="mensagemInput" placeholder="Digite sua mensagem" />
-        <button type="submit" class="btn primary">Enviar</button>
+      <form id="chatForm" class="chat-input">
+        <input type="text" id="mensagemInput" placeholder="Digite sua mensagem">
+        <button type="submit">Enviar</button>
       </form>
-    </main>
+    </div>
   </div>
 
+  <!-- 🚨 Garantir que o script é carregado UMA vez só -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
