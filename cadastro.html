@@ -2,31 +2,21 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Meu Chat — Cadastro</title>
+  <title>Cadastro - Meu Chat</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body class="auth-body">
-  <div class="auth-card">
-    <h1 class="app-title">Criar conta</h1>
-    <form id="cadastroForm" class="form">
-      <label for="nomeCadastro">Nome</label>
-      <input id="nomeCadastro" type="text" placeholder="Seu nome" required />
-
-      <label for="usuarioCadastro">Usuário (apelido único)</label>
-      <input id="usuarioCadastro" type="text" placeholder="ex: joaosilva" required />
-
-      <label for="telefoneCadastro">Telefone</label>
-      <input id="telefoneCadastro" type="tel" placeholder="ex: 11988887777" required />
-
-      <label for="senhaCadastro">Senha</label>
-      <input id="senhaCadastro" type="password" placeholder="Crie uma senha" required />
-
-      <button type="submit" class="btn primary">Cadastrar</button>
+<body>
+  <div class="cadastro-container">
+    <h2>Cadastro</h2>
+    <form id="cadastroForm">
+      <input type="text" id="nomeCadastro" placeholder="Nome" required />
+      <input type="text" id="usuarioCadastro" placeholder="Usuário" required />
+      <input type="text" id="telefoneCadastro" placeholder="Telefone" required />
+      <input type="password" id="senhaCadastro" placeholder="Senha" required />
+      <button type="submit">Cadastrar</button>
     </form>
-    <p class="muted"><a href="index.html">Voltar ao login</a></p>
+    <p>Já tem conta? <a href="index.html">Login</a></p>
   </div>
-
   <script type="module" src="app.js"></script>
 </body>
 </html>

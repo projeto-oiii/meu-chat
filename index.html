@@ -2,23 +2,19 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Meu Chat — Login</title>
+  <title>Login - Meu Chat</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body class="auth-body">
-  <div class="auth-card">
-    <h1 class="app-title">Meu Chat</h1>
-    <form id="loginForm" class="form">
-      <label for="loginInput">Usuário ou Telefone</label>
-      <input id="loginInput" type="text" placeholder="seu usuário ou telefone" required />
-      <label for="senhaLogin">Senha</label>
-      <input id="senhaLogin" type="password" placeholder="sua senha" required />
-      <button type="submit" class="btn primary">Entrar</button>
+<body>
+  <div class="login-container">
+    <h2>Login</h2>
+    <form id="loginForm">
+      <input type="text" id="loginInput" placeholder="Usuário ou Telefone" required />
+      <input type="password" id="senhaLogin" placeholder="Senha" required />
+      <button type="submit">Entrar</button>
     </form>
-    <p class="muted">Ainda não tem conta? <a href="cadastro.html">Cadastre-se</a></p>
+    <p>Ainda não tem conta? <a href="cadastro.html">Cadastrar</a></p>
   </div>
-
   <script type="module" src="app.js"></script>
 </body>
 </html>
