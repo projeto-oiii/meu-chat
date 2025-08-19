@@ -8,10 +8,12 @@
 <body>
   <div class="login-container">
     <h2>Login</h2>
-    <input type="text" id="loginUser" placeholder="Usuário ou Telefone">
-    <input type="password" id="loginPass" placeholder="Senha">
-    <button id="loginBtn">Entrar</button>
-    <p>Ainda não tem conta? <a href="cadastro.html">Cadastre-se</a></p>
+    <form id="loginForm">
+      <input type="text" id="loginUser" placeholder="Usuário ou Telefone" required>
+      <input type="password" id="loginPassword" placeholder="Senha" required>
+      <button type="submit">Entrar</button>
+    </form>
+    <p>Não tem conta? <a href="cadastro.html">Cadastrar</a></p>
   </div>
   <script type="module" src="app.js"></script>
 </body>

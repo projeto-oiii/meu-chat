@@ -2,33 +2,29 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Chat</title>
+  <title>Meu Chat</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="chat-container">
     <aside class="sidebar">
-      <div class="user-info">
-        <span id="currentUser"></span>
-        <button id="logoutBtn">Sair</button>
-      </div>
-      <div class="contacts">
-        <h3>Conversas</h3>
-        <ul id="contactsList"></ul>
-      </div>
+      <h3>Contatos</h3>
+      <ul id="contactsList"></ul>
+      <button id="addContactBtn">Adicionar Contato</button>
     </aside>
 
     <main class="chat-main">
       <header class="chat-header">
-        <span id="chatWith">Selecione uma conversa</span>
+        <span id="chatWith">Selecione um contato</span>
+        <button id="logoutBtn">Sair</button>
       </header>
 
       <div id="messages" class="messages"></div>
 
-      <footer class="chat-footer">
-        <input type="text" id="messageInput" placeholder="Digite sua mensagem">
-        <button id="sendBtn">Enviar</button>
-      </footer>
+      <form id="messageForm" class="message-form">
+        <input type="text" id="messageInput" placeholder="Digite uma mensagem" autocomplete="off">
+        <button type="submit">Enviar</button>
+      </form>
     </main>
   </div>
 

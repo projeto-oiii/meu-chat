@@ -1,29 +1,28 @@
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: #111;
+  background: #121212;
   color: #fff;
 }
 
 .login-container {
   width: 300px;
   margin: 100px auto;
-  background: #202c33;
+  background: #1e1e1e;
   padding: 20px;
   border-radius: 10px;
-  text-align: center;
 }
 
 .login-container input, .login-container button {
-  width: 90%;
-  margin: 10px 0;
+  width: 100%;
   padding: 10px;
-  border-radius: 5px;
+  margin: 5px 0;
   border: none;
+  border-radius: 5px;
 }
 
 .login-container button {
-  background: #00a884;
+  background: #25d366;
   color: white;
   cursor: pointer;
 }
@@ -33,137 +32,108 @@ body {
   height: 100vh;
 }
 
-/* Sidebar */
 .sidebar {
-  width: 25%;
-  background: #202c33;
-  display: flex;
-  flex-direction: column;
-}
-
-.user-info {
+  width: 250px;
+  background: #1e1e1e;
   padding: 10px;
-  background: #111b21;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.contacts {
-  flex: 1;
   overflow-y: auto;
 }
 
-.contacts ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.sidebar h3 {
+  margin-top: 0;
 }
 
-.contacts li {
-  padding: 15px;
-  border-bottom: 1px solid #2a3942;
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar li {
+  padding: 10px;
+  border-bottom: 1px solid #333;
   cursor: pointer;
 }
 
-.contacts li:hover {
-  background: #2a3942;
+.sidebar li:hover {
+  background: #333;
 }
 
-/* Chat */
 .chat-main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #0b141a;
 }
 
 .chat-header {
-  background: #202c33;
-  padding: 15px;
-  font-weight: bold;
+  background: #1e1e1e;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
 }
 
 .messages {
   flex: 1;
   padding: 10px;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
 }
 
 .message {
   max-width: 60%;
-  padding: 8px 12px;
+  padding: 8px;
+  margin: 5px;
   border-radius: 8px;
-  margin: 5px 0;
   position: relative;
-  word-wrap: break-word;
 }
 
 .message.sent {
-  background: #005c4b;
-  align-self: flex-end;
-  color: white;
+  background: #056162;
+  margin-left: auto;
+  text-align: right;
 }
 
 .message.received {
-  background: #202c33;
-  align-self: flex-start;
-  color: white;
+  background: #262d31;
+  margin-right: auto;
 }
 
-.message .time-status {
-  font-size: 11px;
+.message .time {
+  font-size: 10px;
   color: #bbb;
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 2px;
+  display: block;
+  margin-top: 5px;
 }
 
-/* Status ícones */
-.status {
+.message .status {
+  font-size: 10px;
   margin-left: 5px;
-  font-size: 11px;
 }
 
-.status.sending::after { content: "⏳"; }
-.status.sent::after { content: "✔"; }
-.status.delivered::after { content: "✔✔"; }
-.status.read::after { content: "✔✔"; color: #34b7f1; }
-
-/* Separador de data */
-.date-separator {
-  align-self: center;
-  background: #202c33;
-  padding: 5px 10px;
-  border-radius: 10px;
-  font-size: 12px;
-  margin: 10px 0;
-  color: #ccc;
-}
-
-/* Input */
-.chat-footer {
+.message-form {
   display: flex;
   padding: 10px;
-  background: #202c33;
+  background: #1e1e1e;
 }
 
-.chat-footer input {
+.message-form input {
   flex: 1;
   padding: 10px;
   border: none;
   border-radius: 20px;
-  outline: none;
+  margin-right: 10px;
 }
 
-.chat-footer button {
-  margin-left: 10px;
-  padding: 10px 20px;
+.message-form button {
+  background: #25d366;
   border: none;
+  padding: 10px 20px;
   border-radius: 20px;
-  background: #00a884;
   color: white;
   cursor: pointer;
+}
+
+.date-separator {
+  text-align: center;
+  color: #aaa;
+  margin: 10px 0;
+  font-size: 12px;
 }
