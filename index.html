@@ -1,40 +1,19 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <title>Login — Meu Chat</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="./style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-<body class="auth-bg">
-  <div class="auth-card">
-    <h1>Entrar</h1>
-
-    <form id="loginForm">
-      <label>E-mail</label>
-      <input type="email" id="loginEmail" placeholder="seu@email.com" required />
-      <label>Senha</label>
-      <input type="password" id="loginPassword" placeholder="••••••••" required />
-      <button type="submit" class="btn-primary">Entrar</button>
-    </form>
-
-    <p class="auth-alt">
-      Não tem conta? <a href="./cadastro.html">Cadastre-se</a>
-    </p>
+<body class="login-page">
+  <div class="login-container">
+    <h2>Entrar</h2>
+    <input type="text" id="loginField" placeholder="Usuário ou Telefone">
+    <input type="password" id="loginPassword" placeholder="Senha">
+    <button onclick="login()">Entrar</button>
+    <p>Não tem conta? <a href="cadastro.html">Cadastre-se</a></p>
   </div>
-
-  <script type="module" src="./app.js"></script>
-  <script type="module">
-    import { ensureLoggedOut, loginWithEmail } from './app.js';
-    ensureLoggedOut(); // Se já está logado, vai direto para o chat
-
-    const form = document.getElementById('loginForm');
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('loginEmail').value.trim();
-      const senha = document.getElementById('loginPassword').value;
-      await loginWithEmail(email, senha);
-    });
-  </script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
