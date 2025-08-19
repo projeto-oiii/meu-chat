@@ -26,6 +26,8 @@ let otherLastRead = null;   // timestamp de leitura do outro
 let presenceUnsub = null;
 let typingUnsub = null;
 let typingTimer = null;
+let unsubscribeMsgs = null; // 👈 listener de mensagens
+let unsubscribeChats = null;
 
 // ===== Utils =====
 async function sha256(text) {
@@ -172,7 +174,6 @@ if (addChatBtn) {
 
 // ===== Lista de conversas =====
 const chatList = document.getElementById("chatList");
-let unsubscribeChats = null;
 let lastChatsSnap = null;
 
 function startChatsWatch() {
@@ -251,7 +252,11 @@ if (saveContactBtn) {
 
 // ===== Abrir chat =====
 function abrirChat(id, amigo) {
-  if (chatAtivo === id) return; // ✅ Evita duplicar listeners ao clicar de novo no mesmo contato
+  // Sempre encerra listener antigo antes de abrir outro
+  if (unsubscribeMsgs) {
+    unsubscribeMsgs();
+    unsubscribeMsgs = null;
+  }
 
   chatAtivo = id;
   contatoAtivo = amigo;
@@ -267,8 +272,6 @@ function abrirChat(id, amigo) {
 }
 
 // ===== Mensagens =====
-let unsubscribeMsgs = null;
-
 function carregarMensagens() {
   if (!chatAtivo) return;
   const messagesContainer = document.getElementById("messagesContainer");
