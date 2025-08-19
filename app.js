@@ -1,8 +1,8 @@
-// Import Firebase SDK
+// Importando Firebase
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, orderBy, onSnapshot, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// Configuração Firebase
+// Config Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyDFvYgca0_HRX0m_RSER0RgQ3LZDa6kaJ8",
   authDomain: "meu-chat-71046.firebaseapp.com",
@@ -12,20 +12,13 @@ const firebaseConfig = {
   appId: "1:268291748548:web:4001f2e4002d7f0eeb8f91"
 };
 
-// Inicializa Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Salvar login ativo no navegador
-function salvarSessao(usuario) {
-  localStorage.setItem("usuarioAtivo", JSON.stringify(usuario));
-}
-function pegarSessao() {
-  return JSON.parse(localStorage.getItem("usuarioAtivo"));
-}
-function limparSessao() {
-  localStorage.removeItem("usuarioAtivo");
-}
+// Sessão
+function salvarSessao(user) { localStorage.setItem("usuarioAtivo", JSON.stringify(user)); }
+function pegarSessao() { return JSON.parse(localStorage.getItem("usuarioAtivo")); }
+function limparSessao() { localStorage.removeItem("usuarioAtivo"); }
 
 // ===== Cadastro =====
 const cadastroForm = document.getElementById("cadastroForm");
@@ -37,15 +30,9 @@ if (cadastroForm) {
     const telefone = document.getElementById("telefone").value;
     const senha = document.getElementById("senha").value;
 
-    try {
-      await setDoc(doc(db, "users", usuario), {
-        nome, usuario, telefone, senha
-      });
-      alert("Cadastro realizado com sucesso!");
-      window.location.href = "index.html";
-    } catch (err) {
-      alert("Erro ao cadastrar: " + err.message);
-    }
+    await setDoc(doc(db, "users", usuario), { nome, usuario, telefone, senha });
+    alert("Cadastro realizado!");
+    window.location.href = "index.html";
   });
 }
 
@@ -57,79 +44,131 @@ if (loginForm) {
     const loginUser = document.getElementById("loginUser").value;
     const senha = document.getElementById("loginSenha").value;
 
-    try {
-      // busca por nickname ou telefone
-      const q1 = query(collection(db, "users"), where("usuario", "==", loginUser));
-      const q2 = query(collection(db, "users"), where("telefone", "==", loginUser));
+    let q = query(collection(db, "users"), where("usuario", "==", loginUser));
+    let snap = await getDocs(q);
 
-      let querySnapshot = await getDocs(q1);
-      if (querySnapshot.empty) {
-        querySnapshot = await getDocs(q2);
-      }
-
-      if (querySnapshot.empty) {
-        alert("Usuário não encontrado.");
-        return;
-      }
-
-      const userDoc = querySnapshot.docs[0].data();
-      if (userDoc.senha !== senha) {
-        alert("Senha incorreta.");
-        return;
-      }
-
-      salvarSessao(userDoc);
-      window.location.href = "chat.html";
-    } catch (err) {
-      alert("Erro no login: " + err.message);
+    if (snap.empty) {
+      q = query(collection(db, "users"), where("telefone", "==", loginUser));
+      snap = await getDocs(q);
     }
+
+    if (snap.empty) { alert("Usuário não encontrado"); return; }
+
+    const user = snap.docs[0].data();
+    if (user.senha !== senha) { alert("Senha incorreta"); return; }
+
+    salvarSessao(user);
+    window.location.href = "chat.html";
   });
 }
 
 // ===== Chat =====
+const chatList = document.getElementById("chatList");
 const chatForm = document.getElementById("chatForm");
-const chatMessages = document.getElementById("chatMessages");
+const messagesContainer = document.getElementById("messagesContainer");
+const searchBtn = document.getElementById("searchBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 
-if (chatForm && chatMessages) {
-  const usuario = pegarSessao();
-  if (!usuario) {
-    window.location.href = "index.html";
-  } else {
-    document.getElementById("meNome").innerText = usuario.nome;
-    document.getElementById("meUser").innerText = "@" + usuario.usuario;
+let chatAtivo = null;
+let usuario = pegarSessao();
 
+if (chatList && usuario) {
+  document.getElementById("meUser").innerText = usuario.usuario;
+
+  // Mostrar lista de chats
+  const q = query(collection(db, "chats"));
+  onSnapshot(q, (snapshot) => {
+    chatList.innerHTML = "";
+    snapshot.forEach(docSnap => {
+      const chat = docSnap.data();
+      if (chat.participantes.includes(usuario.usuario)) {
+        const div = document.createElement("div");
+        div.classList.add("p-3", "border-b", "cursor-pointer", "hover:bg-gray-100");
+        div.innerText = chat.participantes.filter(u => u !== usuario.usuario).join(", ") || "Chat Geral";
+        div.onclick = () => abrirChat(docSnap.id, chat);
+        chatList.appendChild(div);
+      }
+    });
+  });
+
+  // Buscar e criar chat
+  searchBtn.addEventListener("click", async () => {
+    const search = document.getElementById("searchInput").value;
+    if (!search) return;
+
+    const q1 = query(collection(db, "users"), where("usuario", "==", search));
+    const q2 = query(collection(db, "users"), where("telefone", "==", search));
+
+    let snap = await getDocs(q1);
+    if (snap.empty) snap = await getDocs(q2);
+
+    if (snap.empty) { alert("Usuário não encontrado"); return; }
+
+    const amigo = snap.docs[0].data();
+
+    // Verificar se já existe chat
+    const qChat = query(collection(db, "chats"));
+    const snapChats = await getDocs(qChat);
+    let chatExistente = null;
+
+    snapChats.forEach(docSnap => {
+      const chat = docSnap.data();
+      if (chat.participantes.includes(usuario.usuario) && chat.participantes.includes(amigo.usuario)) {
+        chatExistente = docSnap;
+      }
+    });
+
+    if (chatExistente) {
+      abrirChat(chatExistente.id, chatExistente.data());
+    } else {
+      const novoChat = await addDoc(collection(db, "chats"), {
+        participantes: [usuario.usuario, amigo.usuario]
+      });
+      abrirChat(novoChat.id, { participantes: [usuario.usuario, amigo.usuario] });
+    }
+  });
+
+  // Enviar mensagem
+  if (chatForm) {
     chatForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const msg = document.getElementById("mensagemInput").value;
-      await addDoc(collection(db, "mensagens"), {
-        texto: msg,
+      if (!chatAtivo) return;
+      const texto = document.getElementById("mensagemInput").value;
+      await addDoc(collection(db, "chats", chatAtivo, "mensagens"), {
         usuario: usuario.usuario,
-        nome: usuario.nome,
+        texto,
         timestamp: new Date()
       });
       chatForm.reset();
     });
-
-    const q = query(collection(db, "mensagens"), orderBy("timestamp", "asc"));
-    onSnapshot(q, (snapshot) => {
-      chatMessages.innerHTML = "";
-      snapshot.forEach((doc) => {
-        const msg = doc.data();
-        const div = document.createElement("div");
-        div.classList.add("msg");
-        div.classList.add(msg.usuario === usuario.usuario ? "me" : "other");
-        div.innerHTML = `<div class="from">${msg.nome}</div>${msg.texto}`;
-        chatMessages.appendChild(div);
-      });
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    });
   }
 
+  // Logout
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
       limparSessao();
       window.location.href = "index.html";
     });
   }
+}
+
+// ===== Abrir Chat =====
+function abrirChat(chatId, chat) {
+  chatAtivo = chatId;
+  document.getElementById("chatTitle").innerText =
+    chat.participantes.filter(u => u !== usuario.usuario).join(", ") || "Chat Geral";
+
+  const q = query(collection(db, "chats", chatId, "mensagens"), orderBy("timestamp", "asc"));
+  onSnapshot(q, (snapshot) => {
+    messagesContainer.innerHTML = "";
+    snapshot.forEach(msgSnap => {
+      const msg = msgSnap.data();
+      const div = document.createElement("div");
+      div.classList.add("p-2", "my-1", "rounded", "max-w-xs");
+      div.classList.add(msg.usuario === usuario.usuario ? "bg-green-200 ml-auto" : "bg-white");
+      div.innerText = `${msg.usuario}: ${msg.texto}`;
+      messagesContainer.appendChild(div);
+    });
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  });
 }

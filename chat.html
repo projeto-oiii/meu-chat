@@ -2,79 +2,48 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Meu Chat</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-gray-100 h-screen overflow-hidden">
   <div class="flex h-full">
     
     <!-- Sidebar -->
-    <div class="sidebar bg-white w-1/3 md:w-1/4 lg:w-1/5 border-r border-gray-200 flex flex-col active-tab" id="sidebar">
-      <!-- Header -->
+    <div class="sidebar bg-white w-1/3 md:w-1/4 border-r border-gray-200 flex flex-col" id="sidebar">
       <div class="bg-gray-100 p-3 flex justify-between items-center">
         <div class="flex items-center">
-          <img id="user-avatar" src="https://via.placeholder.com/40" alt="Profile" class="rounded-full w-10 h-10">
+          <img src="https://via.placeholder.com/40" alt="Avatar" class="rounded-full w-10 h-10">
+          <span id="meUser" class="ml-2 font-semibold"></span>
         </div>
-        <div class="flex space-x-4 text-gray-500">
-          <button id="new-chat-btn" class="hover:text-gray-700">
-            <i class="fas fa-comment-alt"></i>
-          </button>
-          <button id="logout-btn" class="hover:text-red-500">
-            <i class="fas fa-sign-out-alt"></i>
-          </button>
-        </div>
+        <button id="logoutBtn" class="text-red-500"><i class="fas fa-sign-out-alt"></i></button>
       </div>
 
-      <!-- Search -->
-      <div class="p-2 bg-white">
-        <div class="relative">
-          <input type="text" placeholder="Pesquisar usuário por telefone ou nickname" 
-                id="search-input"
-                class="w-full bg-gray-100 rounded-lg py-2 px-4 pl-10 text-sm focus:outline-none">
-          <i class="fas fa-search absolute left-3 top-2.5 text-gray-500"></i>
-        </div>
+      <!-- Buscar usuário -->
+      <div class="p-2">
+        <input type="text" id="searchInput" placeholder="Procurar por usuário ou telefone" class="w-full p-2 border rounded">
+        <button id="searchBtn" class="mt-2 w-full bg-green-500 text-white py-1 rounded">Adicionar</button>
       </div>
 
-      <!-- Chat list -->
-      <div class="flex-1 overflow-y-auto custom-scrollbar" id="chat-list">
-        <!-- Conversas vão ser carregadas aqui -->
-      </div>
+      <!-- Lista de chats -->
+      <div class="flex-1 overflow-y-auto" id="chatList"></div>
     </div>
 
-    <!-- Chat area -->
-    <div class="chat-area flex-1 flex flex-col bg-gray-50 active-tab" id="chat-area">
-      <!-- Header do chat -->
-      <div class="bg-gray-100 p-3 flex justify-between items-center border-b border-gray-200">
-        <div class="flex items-center">
-          <button id="back-btn" class="md:hidden mr-2 text-gray-500">
-            <i class="fas fa-arrow-left"></i>
-          </button>
-          <img id="chat-avatar" src="https://via.placeholder.com/40" alt="Contact" class="rounded-full w-10 h-10">
-          <div class="ml-3">
-            <h3 class="font-semibold" id="chat-contact-name">Selecione um chat</h3>
-          </div>
-        </div>
+    <!-- Área do chat -->
+    <div class="chat-area flex-1 flex flex-col bg-gray-50" id="chatArea">
+      <div class="bg-gray-100 p-3 flex items-center border-b">
+        <h3 id="chatTitle" class="font-semibold">Selecione um chat</h3>
       </div>
 
-      <!-- Mensagens -->
-      <div class="flex-1 overflow-y-auto p-4 custom-scrollbar bg-[#e5ddd5]" id="messages-container">
-        <p class="text-center text-gray-500 mt-10">Nenhuma conversa selecionada</p>
-      </div>
+      <div class="flex-1 overflow-y-auto p-4" id="messagesContainer"></div>
 
-      <!-- Input -->
-      <div class="bg-gray-100 p-3 flex items-center">
-        <input type="text" placeholder="Digite uma mensagem" 
-              class="flex-1 bg-white rounded-lg py-2 px-4 mx-2 focus:outline-none" id="message-input">
-        <button class="p-2 text-gray-500 hover:text-gray-700" id="send-btn">
-          <i class="fas fa-paper-plane"></i>
-        </button>
-      </div>
+      <form class="p-3 flex" id="chatForm">
+        <input type="text" id="mensagemInput" placeholder="Digite sua mensagem" class="flex-1 border rounded px-3 py-2">
+        <button class="ml-2 bg-green-500 text-white px-4 py-2 rounded" type="submit">Enviar</button>
+      </form>
     </div>
   </div>
-
   <script type="module" src="app.js"></script>
 </body>
 </html>
