@@ -1,45 +1,39 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - Meu Chat</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <title>Login — Meu Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="./style.css" />
 </head>
-<body>
-  <h2>Login</h2>
+<body class="auth-bg">
+  <div class="auth-card">
+    <h1>Entrar</h1>
 
-  <input type="email" id="email" placeholder="Digite seu e-mail">
-  <input type="password" id="senha" placeholder="Digite sua senha">
-  <button id="btnLogin">Entrar</button>
+    <form id="loginForm">
+      <label>E-mail</label>
+      <input type="email" id="loginEmail" placeholder="seu@email.com" required />
+      <label>Senha</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" required />
+      <button type="submit" class="btn-primary">Entrar</button>
+    </form>
 
-  <p>Não tem conta? <a href="cadastro.html">Cadastre-se aqui</a></p>
+    <p class="auth-alt">
+      Não tem conta? <a href="./cadastro.html">Cadastre-se</a>
+    </p>
+  </div>
 
+  <script type="module" src="./app.js"></script>
   <script type="module">
-    import { auth } from "./app.js";
-    import { 
-      signInWithEmailAndPassword,
-      onAuthStateChanged 
-    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { ensureLoggedOut, loginWithEmail } from './app.js';
+    ensureLoggedOut(); // Se já está logado, vai direto para o chat
 
-    const emailInput = document.getElementById("email");
-    const senhaInput = document.getElementById("senha");
-    const btnLogin = document.getElementById("btnLogin");
-
-    // 🔑 Login
-    btnLogin.addEventListener("click", () => {
-      signInWithEmailAndPassword(auth, emailInput.value, senhaInput.value)
-        .then(() => {
-          window.location.href = "chat.html"; 
-        })
-        .catch(err => alert("Erro: " + err.message));
-    });
-
-    // ✅ Se já estiver logado, pula direto pro chat
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        window.location.href = "chat.html";
-      }
+    const form = document.getElementById('loginForm');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim();
+      const senha = document.getElementById('loginPassword').value;
+      await loginWithEmail(email, senha);
     });
   </script>
 </body>

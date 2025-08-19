@@ -1,121 +1,129 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Meu Chat - WhatsApp Clone</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <title>Meu Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="./style.css" />
 </head>
-<body>
-  <div class="chat-container">
+<body class="app">
+  <div class="app-shell">
+    <!-- Sidebar Esquerda -->
+    <aside class="sidebar">
+      <header class="sidebar-header">
+        <div class="me">
+          <div class="avatar" id="meAvatar">👤</div>
+          <div class="me-info">
+            <div class="me-name" id="meName">...</div>
+            <div class="me-username" id="meUsername">@...</div>
+          </div>
+        </div>
+        <button id="btnLogout" class="btn-ghost" title="Sair">⎋</button>
+      </header>
 
-    <!-- Sidebar (lista de conversas) -->
-    <div class="sidebar">
-      <div class="sidebar-header">
-        <h3>Conversas</h3>
-        <button id="btnLogout">Sair</button>
+      <div class="sidebar-search">
+        <input id="searchInput" placeholder="Pesquisar ou começar nova conversa" />
+        <button id="btnNewChat" title="Novo chat">＋</button>
       </div>
-      <input type="text" placeholder="Pesquisar ou começar nova conversa" class="search">
-      <div id="conversas" class="conversas"></div>
-    </div>
 
-    <!-- Área de conversa -->
-    <div class="chat-area">
-      <div class="chat-header">
-        <h3 id="chatTitulo">Selecione uma conversa</h3>
-      </div>
-      <div id="mensagens" class="mensagens"></div>
-      <div class="chat-input">
-        <input type="text" id="mensagemInput" placeholder="Digite sua mensagem">
-        <button id="btnEnviar">Enviar</button>
-      </div>
-    </div>
+      <nav class="sidebar-tabs">
+        <button class="tab active" data-tab="conversas">Conversas</button>
+        <button class="tab" data-tab="arquivadas">Arquivadas</button>
+        <button class="tab" data-tab="grupos">Grupos</button>
+      </nav>
 
+      <div class="sidebar-list" id="listConversas"></div>
+      <div class="sidebar-list hidden" id="listArquivadas"></div>
+
+      <div class="sidebar-groups hidden" id="groupsPane">
+        <div class="group-create">
+          <input id="groupName" placeholder="Nome do grupo" />
+          <input id="groupMembers" placeholder="Usernames separados por vírgula" />
+          <button id="btnCreateGroup" class="btn-primary">Criar grupo</button>
+        </div>
+        <div class="sidebar-list" id="listGrupos"></div>
+      </div>
+    </aside>
+
+    <!-- Painel de Conversa -->
+    <main class="chat">
+      <header class="chat-header">
+        <div class="chat-peer">
+          <div class="avatar" id="peerAvatar">💬</div>
+          <div>
+            <div class="peer-name" id="peerName">Selecione uma conversa</div>
+            <div class="peer-sub" id="peerSub"></div>
+          </div>
+        </div>
+        <div class="chat-actions">
+          <button id="btnArchive" class="btn-ghost" title="Arquivar/Desarquivar">📦</button>
+        </div>
+      </header>
+
+      <section class="chat-messages" id="messages"></section>
+
+      <form id="messageForm" class="chat-input">
+        <input id="messageText" placeholder="Digite uma mensagem" autocomplete="off" />
+        <button class="btn-primary">Enviar</button>
+      </form>
+    </main>
   </div>
 
+  <script type="module" src="./app.js"></script>
   <script type="module">
-    import { auth } from "./app.js";
-    import { 
-      signOut, onAuthStateChanged 
-    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-    import { 
-      getFirestore, collection, addDoc, query, orderBy, onSnapshot 
-    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+    import {
+      ensureLoggedIn,
+      loadMe,
+      onTabChange,
+      openNewChatPrompt,
+      listenConversations,
+      listenArchived,
+      listenGroups,
+      openDirectChat,
+      openGroupChat,
+      sendMessage,
+      toggleArchive,
+      logout
+    } from './app.js';
 
-    const db = getFirestore();
-    const btnLogout = document.getElementById("btnLogout");
-    const conversasDiv = document.getElementById("conversas");
-    const mensagensDiv = document.getElementById("mensagens");
-    const msgInput = document.getElementById("mensagemInput");
-    const btnEnviar = document.getElementById("btnEnviar");
-    const chatTitulo = document.getElementById("chatTitulo");
+    // Se não estiver logado, volta para login
+    ensureLoggedIn();
 
-    let usuario = null;
-    let conversaAtiva = null;
-
-    // 🔐 Verifica se está logado
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        window.location.href = "index.html";
-      } else {
-        usuario = user;
-        carregarConversas();
-      }
+    // Dados do usuário atual na UI
+    loadMe({
+      nameEl: document.getElementById('meName'),
+      usernameEl: document.getElementById('meUsername'),
     });
 
-    // 🚪 Logout
-    btnLogout.addEventListener("click", () => {
-      signOut(auth);
+    // Tabs
+    document.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', () => onTabChange(btn.dataset.tab));
     });
 
-    // 📂 Carregar conversas
-    function carregarConversas() {
-      conversasDiv.innerHTML = "";
-
-      const lista = ["Amigos", "Família", "Trabalho"]; // exemplo fixo de grupos
-      lista.forEach(nome => {
-        const div = document.createElement("div");
-        div.className = "conversa-item";
-        div.textContent = nome;
-        div.addEventListener("click", () => abrirConversa(nome));
-        conversasDiv.appendChild(div);
-      });
-    }
-
-    // 🔑 Abrir conversa
-    function abrirConversa(nome) {
-      conversaAtiva = nome;
-      chatTitulo.textContent = nome;
-      mensagensDiv.innerHTML = "";
-
-      const q = query(
-        collection(db, "conversas", nome, "mensagens"),
-        orderBy("timestamp")
-      );
-
-      onSnapshot(q, (snapshot) => {
-        mensagensDiv.innerHTML = "";
-        snapshot.forEach((doc) => {
-          const msg = doc.data();
-          const div = document.createElement("div");
-          div.className = msg.email === usuario.email ? "msg minha" : "msg";
-          div.textContent = msg.email + ": " + msg.texto;
-          mensagensDiv.appendChild(div);
-        });
-        mensagensDiv.scrollTop = mensagensDiv.scrollHeight;
-      });
-    }
-
-    // 📨 Enviar mensagem
-    btnEnviar.addEventListener("click", async () => {
-      if (msgInput.value.trim() === "" || !conversaAtiva) return;
-      await addDoc(collection(db, "conversas", conversaAtiva, "mensagens"), {
-        email: usuario.email,
-        texto: msgInput.value,
-        timestamp: new Date()
-      });
-      msgInput.value = "";
+    // Ações
+    document.getElementById('btnNewChat').addEventListener('click', openNewChatPrompt);
+    document.getElementById('btnLogout').addEventListener('click', logout);
+    document.getElementById('btnCreateGroup').addEventListener('click', () => {
+      // handled inside app.js (listener attached there)
     });
+
+    // Listeners de listas
+    listenConversations(document.getElementById('listConversas'), openDirectChat);
+    listenArchived(document.getElementById('listArquivadas'), openDirectChat);
+    listenGroups(document.getElementById('listGrupos'), openGroupChat);
+
+    // Enviar mensagens
+    const form = document.getElementById('messageForm');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = document.getElementById('messageText').value.trim();
+      if (!text) return;
+      await sendMessage(text);
+      document.getElementById('messageText').value = '';
+    });
+
+    // Arquivar
+    document.getElementById('btnArchive').addEventListener('click', toggleArchive);
   </script>
 </body>
 </html>
