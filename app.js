@@ -1,11 +1,11 @@
-// ===== Importações Firebase =====
+// Import Firebase
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {
-  getFirestore, collection, addDoc, query, where, getDocs, onSnapshot,
-  doc, setDoc, orderBy, getDoc
+  getFirestore, collection, addDoc, doc, setDoc, getDoc,
+  query, where, getDocs, onSnapshot, orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-// ===== Configuração Firebase =====
+// Configuração Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyDFvYgca0_HRX0m_RSER0RgQ3LZDa6kaJ8",
   authDomain: "meu-chat-71046.firebaseapp.com",
@@ -14,120 +14,79 @@ const firebaseConfig = {
   messagingSenderId: "268291748548",
   appId: "1:268291748548:web:4001f2e4002d7f0eeb8f91"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// ===== Variáveis Globais =====
+// Armazena o usuário logado
 let usuario = JSON.parse(localStorage.getItem("usuario")) || null;
-let chatAtivo = null;              // id do chat (ex: "ana_joao")
-let contatoAtivo = null;           // nickname real do outro participante
-let apelidos = {};                 // cache: { contatoNickname: "apelido salvo" }
+let chatAtivo = null;
+let chatAtivoData = null;
 
-// ===== Helpers de contatos (apelidos) =====
-async function salvarContatoAs(ownerUser, contatoNickname, apelido) {
-  await setDoc(doc(db, "contacts", ownerUser, "lista", contatoNickname), {
-    contato: contatoNickname,
-    apelido: apelido
-  });
-}
-
-async function getApelidoOnce(ownerUser, contatoNickname) {
-  const ref = doc(db, "contacts", ownerUser, "lista", contatoNickname);
-  const snap = await getDoc(ref);
-  return snap.exists() ? (snap.data().apelido || contatoNickname) : contatoNickname;
-}
-
-function watchApelidos(ownerUser) {
-  const colRef = collection(db, "contacts", ownerUser, "lista");
-  onSnapshot(colRef, (snap) => {
-    snap.docChanges().forEach(change => {
-      const data = change.doc.data();
-      apelidos[data.contato] = data.apelido || data.contato;
-    });
-    // Atualiza cabeçalho se for o contato ativo
-    if (contatoAtivo) {
-      const header = document.getElementById("chatAtivoNome");
-      if (header) header.innerText = apelidos[contatoAtivo] || contatoAtivo;
-    }
-    // Atualiza lista visual (re-render simples)
-    renderListaChats();
-  });
-}
-
-// ===== Cadastro =====
-const cadastroForm = document.getElementById("cadastroForm");
-if (cadastroForm) {
-  cadastroForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const nome = document.getElementById("nomeCadastro").value.trim();
-    const usuarioCadastro = document.getElementById("usuarioCadastro").value.trim();
-    const telefone = document.getElementById("telefoneCadastro").value.trim();
-    const senha = document.getElementById("senhaCadastro").value;
-
-    try {
-      await setDoc(doc(db, "users", usuarioCadastro), {
-        nome,
-        usuario: usuarioCadastro,
-        telefone,
-        senha
-      });
-      alert("Cadastro realizado! Faça login.");
-      window.location.href = "index.html";
-    } catch (err) {
-      alert("Erro ao cadastrar: " + err.message);
-    }
-  });
-}
-
-// ===== Login =====
+// ----------------- LOGIN -----------------
 const loginForm = document.getElementById("loginForm");
 if (loginForm) {
   loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const loginInput = document.getElementById("loginInput").value.trim();
-    const senhaLogin = document.getElementById("senhaLogin").value;
+    const senha = document.getElementById("senhaLogin").value;
 
-    let userData = null;
+    const q = query(collection(db, "usuarios"), where("senha", "==", senha));
+    const snap = await getDocs(q);
 
-    // 1) tenta buscar por usuário
-    let q = query(collection(db, "users"), where("usuario", "==", loginInput));
-    let resultado = await getDocs(q);
-
-    // 2) se não encontrar, busca por telefone
-    if (resultado.empty) {
-      q = query(collection(db, "users"), where("telefone", "==", loginInput));
-      resultado = await getDocs(q);
-    }
-
-    if (!resultado.empty) {
-      userData = resultado.docs[0].data();
-    }
-
-    if (userData) {
-      if (userData.senha === senhaLogin) {
-        usuario = userData;
-        localStorage.setItem("usuario", JSON.stringify(userData));
-        window.location.href = "chat.html";
-      } else {
-        alert("Senha incorreta.");
+    let encontrado = null;
+    snap.forEach((doc) => {
+      const data = doc.data();
+      if (data.usuario === loginInput || data.telefone === loginInput) {
+        encontrado = { id: doc.id, ...data };
       }
+    });
+
+    if (encontrado) {
+      localStorage.setItem("usuario", JSON.stringify(encontrado));
+      window.location.href = "chat.html";
     } else {
-      alert("Usuário não encontrado.");
+      alert("Usuário ou senha incorretos!");
     }
   });
 }
 
-// ===== Chat (somente nas páginas de chat) =====
-const userNome = document.getElementById("userNome");
-if (userNome && usuario) {
-  userNome.innerText = usuario.usuario;
-  // começa a observar os apelidos do usuário logado
-  watchApelidos(usuario.usuario);
+// ----------------- CADASTRO -----------------
+const cadastroForm = document.getElementById("cadastroForm");
+if (cadastroForm) {
+  cadastroForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const nome = document.getElementById("nomeCadastro").value.trim();
+    const usuarioCad = document.getElementById("usuarioCadastro").value.trim();
+    const telefone = document.getElementById("telefoneCadastro").value.trim();
+    const senha = document.getElementById("senhaCadastro").value;
+
+    await addDoc(collection(db, "usuarios"), {
+      nome, usuario: usuarioCad, telefone, senha
+    });
+
+    alert("Cadastro realizado com sucesso! Faça login.");
+    window.location.href = "index.html";
+  });
 }
 
-// Botão sair
+// ----------------- CHAT -----------------
+const chatList = document.getElementById("chatList");
+const userNome = document.getElementById("userNome");
 const logoutBtn = document.getElementById("logoutBtn");
+const chatForm = document.getElementById("chatForm");
+const mensagemInput = document.getElementById("mensagemInput");
+const messagesContainer = document.getElementById("messagesContainer");
+const chatAtivoNome = document.getElementById("chatAtivoNome");
+const saveContactBtn = document.getElementById("saveContactBtn");
+const groupInfoBtn = document.getElementById("groupInfoBtn");
+const backToChatBtn = document.getElementById("backToChatBtn");
+
+// Exibir nome do usuário logado
+if (userNome && usuario) {
+  userNome.innerText = usuario.nome || usuario.usuario;
+}
+
+// Logout
 if (logoutBtn) {
   logoutBtn.addEventListener("click", () => {
     localStorage.removeItem("usuario");
@@ -135,142 +94,63 @@ if (logoutBtn) {
   });
 }
 
-// ===== Adicionar amigo/chat =====
-const addChatBtn = document.getElementById("addChatBtn");
-if (addChatBtn) {
-  addChatBtn.addEventListener("click", async () => {
-    const entrada = (document.getElementById("novoChatInput").value || "").trim();
-    if (!entrada) return;
-
-    if (!usuario) {
-      alert("Faça login novamente.");
-      return;
-    }
-
-    // Descobrir o nickname real do amigo: pode ter digitado nickname OU telefone
-    let amigoNickname = null;
-
-    // tenta como usuário
-    let r = await getDocs(query(collection(db, "users"), where("usuario", "==", entrada)));
-    if (!r.empty) amigoNickname = r.docs[0].data().usuario;
-
-    // se não achou, tenta como telefone
-    if (!amigoNickname) {
-      r = await getDocs(query(collection(db, "users"), where("telefone", "==", entrada)));
-      if (!r.empty) amigoNickname = r.docs[0].data().usuario;
-    }
-
-    if (!amigoNickname) {
-      alert("Usuário não encontrado pelo apelido/telefone.");
-      return;
-    }
-
-    if (amigoNickname === usuario.usuario) {
-      alert("Você não pode iniciar chat consigo mesmo.");
-      return;
-    }
-
-    const chatId = [usuario.usuario, amigoNickname].sort().join("_");
-    await setDoc(doc(db, "chats", chatId), {
-      membros: [usuario.usuario, amigoNickname]
-    });
-
-    document.getElementById("novoChatInput").value = "";
-  });
-}
-
-// ===== Lista de chats (observa com array-contains) =====
-const chatList = document.getElementById("chatList");
-let unsubscribeChats = null; // para re-render simples
-function startChatsWatch() {
+// ----------------- LISTAR CHATS -----------------
+async function listarChats() {
   if (!chatList || !usuario) return;
 
-  const q = query(collection(db, "chats"), where("membros", "array-contains", usuario.usuario));
-  if (unsubscribeChats) unsubscribeChats(); // limpa ouvinte anterior
-  unsubscribeChats = onSnapshot(q, () => {
-    renderListaChats();
-  });
-}
+  const q = query(collection(db, "chats"));
+  onSnapshot(q, async (snapshot) => {
+    chatList.innerHTML = "";
+    for (const docSnap of snapshot.docs) {
+      const dados = docSnap.data();
+      if (!dados.membros.includes(usuario.usuario)) continue;
 
-async function renderListaChats() {
-  if (!chatList || !usuario) return;
-
-  // Busca novamente para ter os dados
-  const q = query(collection(db, "chats"), where("membros", "array-contains", usuario.usuario));
-  const snap = await getDocs(q);
-
-  chatList.innerHTML = "";
-  snap.docs.forEach((docSnap) => {
-    const dados = docSnap.data();
-    const amigo = (dados.membros || []).filter(m => m !== usuario.usuario)[0] || "Chat";
-
-    const nomeExibicao = apelidos[amigo] || amigo;
-
-    const li = document.createElement("li");
-    li.textContent = nomeExibicao;
-
-    // Abrir chat ao clicar
-    li.addEventListener("click", () => {
-      chatAtivo = docSnap.id;
-      contatoAtivo = amigo; // nickname real do outro
-      document.getElementById("chatAtivoNome").innerText = apelidos[amigo] || amigo;
-      const saveBtn = document.getElementById("saveContactBtn");
-      if (saveBtn) saveBtn.disabled = false;
-      carregarMensagens();
-    });
-
-    // Renomear contato com botão direito (desktop)
-    li.addEventListener("contextmenu", async (e) => {
-      e.preventDefault();
-      const atual = apelidos[amigo] || amigo;
-      const novo = prompt("Salvar contato como:", atual);
-      if (novo && novo.trim()) {
-        await salvarContatoAs(usuario.usuario, amigo, novo.trim());
+      let nomeExibicao = "";
+      if (dados.isGroup) {
+        nomeExibicao = dados.nome;
+      } else {
+        const amigo = dados.membros.find((m) => m !== usuario.usuario);
+        nomeExibicao = await getApelido(usuario.usuario, amigo);
       }
-    });
 
-    chatList.appendChild(li);
-  });
-}
+      const li = document.createElement("li");
+      li.innerText = nomeExibicao;
 
-// Inicia observação de chats
-startChatsWatch();
+      li.addEventListener("click", () => {
+        chatAtivo = docSnap.id;
+        chatAtivoData = dados;
+        chatAtivoNome.innerText = nomeExibicao;
+        carregarMensagens();
 
-// ===== “Salvar contato” pelo botão no cabeçalho =====
-const saveContactBtn = document.getElementById("saveContactBtn");
-if (saveContactBtn) {
-  saveContactBtn.addEventListener("click", async () => {
-    if (!contatoAtivo || !usuario) return;
-    const atual = apelidos[contatoAtivo] || contatoAtivo;
-    const novo = prompt("Salvar contato como:", atual);
-    if (novo && novo.trim()) {
-      await salvarContatoAs(usuario.usuario, contatoAtivo, novo.trim());
+        if (dados.isGroup) {
+          saveContactBtn.style.display = "none";
+          groupInfoBtn.style.display = "inline-block";
+        } else {
+          saveContactBtn.style.display = "inline-block";
+          groupInfoBtn.style.display = "none";
+        }
+      });
+
+      chatList.appendChild(li);
     }
   });
 }
 
-// ===== Carregar mensagens de um chat =====
-let unsubscribeMsgs = null;
-function carregarMensagens() {
+// ----------------- MENSAGENS -----------------
+async function carregarMensagens() {
   if (!chatAtivo) return;
+  const q = query(
+    collection(db, "chats", chatAtivo, "mensagens"),
+    orderBy("timestamp", "asc")
+  );
 
-  const messagesContainer = document.getElementById("messagesContainer");
-  messagesContainer.innerHTML = "";
-
-  const q = query(collection(db, "chats", chatAtivo, "mensagens"), orderBy("timestamp", "asc"));
-
-  if (unsubscribeMsgs) unsubscribeMsgs();
-  unsubscribeMsgs = onSnapshot(q, (snapshot) => {
+  onSnapshot(q, (snapshot) => {
     messagesContainer.innerHTML = "";
-    snapshot.docs.forEach((docSnap) => {
-      const msg = docSnap.data();
+    snapshot.forEach((doc) => {
+      const msg = doc.data();
       const div = document.createElement("div");
       div.classList.add("message");
-      if (msg.usuario === usuario.usuario) {
-        div.classList.add("bg-me");
-      } else {
-        div.classList.add("bg-other");
-      }
+      div.classList.add(msg.de === usuario.usuario ? "bg-me" : "bg-other");
       div.innerText = msg.texto;
       messagesContainer.appendChild(div);
     });
@@ -278,25 +158,189 @@ function carregarMensagens() {
   });
 }
 
-// ===== Enviar mensagem =====
-const chatForm = document.getElementById("chatForm");
+// Enviar mensagem
 if (chatForm) {
   chatForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (!chatAtivo) {
-      alert("Selecione um chat primeiro!");
-      return;
-    }
-    const input = document.getElementById("mensagemInput");
-    const texto = (input.value || "").trim();
+    if (!chatAtivo) return;
+    const texto = mensagemInput.value.trim();
     if (!texto) return;
 
     await addDoc(collection(db, "chats", chatAtivo, "mensagens"), {
-      usuario: usuario.usuario,
+      de: usuario.usuario,
       texto,
       timestamp: new Date()
     });
-
-    input.value = "";
+    mensagemInput.value = "";
   });
 }
+
+// ----------------- CONTATOS -----------------
+async function salvarContato(usuarioAtual, contato, apelido) {
+  await setDoc(doc(db, "contacts", usuarioAtual, "lista", contato), {
+    contato, apelido
+  });
+}
+async function getApelido(usuarioAtual, contato) {
+  const docRef = doc(db, "contacts", usuarioAtual, "lista", contato);
+  const docSnap = await getDoc(docRef);
+  if (docSnap.exists()) return docSnap.data().apelido;
+  return contato;
+}
+
+// Salvar contato com botão
+if (saveContactBtn) {
+  saveContactBtn.addEventListener("click", async () => {
+    if (!chatAtivoData || chatAtivoData.isGroup) return;
+    const amigo = chatAtivoData.membros.find((m) => m !== usuario.usuario);
+    const apelido = prompt("Salvar contato como:");
+    if (apelido) await salvarContato(usuario.usuario, amigo, apelido);
+  });
+}
+
+// ----------------- ADICIONAR CHAT -----------------
+const addChatBtn = document.getElementById("addChatBtn");
+if (addChatBtn) {
+  addChatBtn.addEventListener("click", async () => {
+    const input = document.getElementById("novoChatInput").value.trim();
+    if (!input) return;
+
+    const q = query(collection(db, "usuarios"));
+    const snap = await getDocs(q);
+
+    let amigo = null;
+    snap.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (data.usuario === input || data.telefone === input) {
+        amigo = data.usuario;
+      }
+    });
+
+    if (!amigo) {
+      alert("Usuário não encontrado!");
+      return;
+    }
+
+    await addDoc(collection(db, "chats"), {
+      membros: [usuario.usuario, amigo],
+      isGroup: false
+    });
+    document.getElementById("novoChatInput").value = "";
+  });
+}
+
+// ----------------- GRUPOS -----------------
+const openGroupModalBtn = document.getElementById("openGroupModalBtn");
+const groupModal = document.getElementById("groupModal");
+const closeGroupModalBtn = document.getElementById("closeGroupModalBtn");
+const contactsList = document.getElementById("contactsList");
+const createGroupBtn = document.getElementById("createGroupBtn");
+
+if (openGroupModalBtn) {
+  openGroupModalBtn.addEventListener("click", async () => {
+    groupModal.classList.remove("hidden");
+    contactsList.innerHTML = "";
+
+    const q = query(collection(db, "contacts", usuario.usuario, "lista"));
+    const snap = await getDocs(q);
+
+    snap.forEach((docSnap) => {
+      const data = docSnap.data();
+      const div = document.createElement("div");
+      div.classList.add("contact-item");
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.value = data.contato;
+
+      const label = document.createElement("label");
+      label.innerText = data.apelido || data.contato;
+
+      div.appendChild(checkbox);
+      div.appendChild(label);
+      contactsList.appendChild(div);
+    });
+  });
+}
+
+if (closeGroupModalBtn) {
+  closeGroupModalBtn.addEventListener("click", () => {
+    groupModal.classList.add("hidden");
+  });
+}
+
+if (createGroupBtn) {
+  createGroupBtn.addEventListener("click", async () => {
+    const nome = document.getElementById("groupNameInput").value.trim();
+    const descricao = document.getElementById("groupDescInput").value.trim();
+    const selecionados = [
+      ...contactsList.querySelectorAll("input:checked")
+    ].map((c) => c.value);
+
+    if (!nome || selecionados.length === 0) {
+      alert("Preencha os dados e selecione membros!");
+      return;
+    }
+
+    selecionados.push(usuario.usuario);
+
+    await addDoc(collection(db, "chats"), {
+      isGroup: true,
+      nome,
+      descricao,
+      admin: usuario.usuario,
+      membros: selecionados,
+      criadoEm: new Date()
+    });
+
+    groupModal.classList.add("hidden");
+    document.getElementById("groupNameInput").value = "";
+    document.getElementById("groupDescInput").value = "";
+  });
+}
+
+// ----------------- INFO DO GRUPO -----------------
+if (groupInfoBtn) {
+  groupInfoBtn.addEventListener("click", async () => {
+    if (!chatAtivoData || !chatAtivoData.isGroup) return;
+    document.getElementById("messagesPage").style.display = "none";
+    document.getElementById("groupInfoPage").style.display = "block";
+
+    document.getElementById("giNome").innerText = chatAtivoData.nome;
+    document.getElementById("giDescricao").innerText = chatAtivoData.descricao;
+    document.getElementById("giCriadoEm").innerText =
+      "Criado em: " + new Date(chatAtivoData.criadoEm.seconds * 1000).toLocaleString();
+    document.getElementById("giAdmin").innerText = "Admin: " + chatAtivoData.admin;
+
+    const giMembros = document.getElementById("giMembros");
+    giMembros.innerHTML = "";
+    for (let m of chatAtivoData.membros) {
+      const li = document.createElement("li");
+      li.innerText = m;
+      if (m === chatAtivoData.admin) {
+        const span = document.createElement("span");
+        span.classList.add("admin-badge");
+        span.innerText = "ADM";
+        li.appendChild(span);
+      }
+      giMembros.appendChild(li);
+    }
+
+    backToChatBtn.style.display = "inline-block";
+    groupInfoBtn.style.display = "none";
+  });
+}
+
+if (backToChatBtn) {
+  backToChatBtn.addEventListener("click", () => {
+    document.getElementById("messagesPage").style.display = "block";
+    document.getElementById("groupInfoPage").style.display = "none";
+    backToChatBtn.style.display = "none";
+    if (chatAtivoData && chatAtivoData.isGroup) {
+      groupInfoBtn.style.display = "inline-block";
+    }
+  });
+}
+
+// ----------------- AUTO -----------------
+if (chatList) listarChats();

@@ -19,6 +19,10 @@
         <button id="addChatBtn">Adicionar</button>
       </div>
 
+      <div class="novo-chat">
+        <button id="openGroupModalBtn" class="fullwidth">+ Novo Grupo</button>
+      </div>
+
       <ul id="chatList"></ul>
     </div>
 
@@ -27,14 +31,55 @@
       <div class="chat-header">
         <h3 id="chatAtivoNome">Selecione um chat</h3>
         <button id="saveContactBtn" class="header-action" disabled>Salvar contato</button>
+        <button id="groupInfoBtn" class="header-action" style="display:none;">Info do grupo</button>
+        <button id="backToChatBtn" class="header-action" style="display:none;">Voltar ao chat</button>
       </div>
 
-      <div id="messagesContainer" class="messages"></div>
+      <!-- Página de mensagens -->
+      <div id="messagesPage">
+        <div id="messagesContainer" class="messages"></div>
+        <form id="chatForm" class="chat-input">
+          <input type="text" id="mensagemInput" placeholder="Digite sua mensagem">
+          <button type="submit">Enviar</button>
+        </form>
+      </div>
 
-      <form id="chatForm" class="chat-input">
-        <input type="text" id="mensagemInput" placeholder="Digite sua mensagem">
-        <button type="submit">Enviar</button>
-      </form>
+      <!-- Página de informações do grupo -->
+      <div id="groupInfoPage" class="group-info" style="display:none;">
+        <h2 id="giNome">Nome do Grupo</h2>
+        <p id="giDescricao">Descrição</p>
+        <p id="giCriadoEm">Criado em: -</p>
+        <p id="giAdmin">Admin: -</p>
+        <h3>Membros</h3>
+        <ul id="giMembros"></ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de criação de grupo -->
+  <div id="groupModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Novo Grupo</h3>
+        <button id="closeGroupModalBtn" class="modal-close">✕</button>
+      </div>
+
+      <label>Nome do grupo</label>
+      <input type="text" id="groupNameInput" placeholder="Ex.: Família" />
+
+      <label>Descrição</label>
+      <textarea id="groupDescInput" rows="3" placeholder="Ex.: Nosso grupo"></textarea>
+
+      <div class="modal-section">
+        <h4>Selecione os contatos</h4>
+        <div id="contactsList" class="contacts-list">
+          <!-- contatos aparecem aqui via JS -->
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="createGroupBtn" class="primary">Criar grupo</button>
+      </div>
     </div>
   </div>
 
