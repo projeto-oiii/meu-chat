@@ -2,30 +2,20 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Cadastro</title>
+  <title>Cadastro - Meu Chat</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="auth-bg">
-  <div class="auth-card">
-    <h1>Cadastro</h1>
+<body>
+  <div class="cadastro-container">
+    <h2>Cadastro</h2>
     <form id="cadastroForm">
-      <label>Nome completo</label>
-      <input type="text" id="nome" required>
-
-      <label>Usuário</label>
-      <input type="text" id="usuario" required>
-
-      <label>Telefone (DDD+número)</label>
-      <input type="text" id="telefone" required>
-
-      <label>Senha</label>
-      <input type="password" id="senha" required>
-
-      <button type="submit" class="btn-primary">Cadastrar</button>
+      <input type="text" id="nomeCadastro" placeholder="Nome completo" required>
+      <input type="text" id="usuarioCadastro" placeholder="Nome de usuário" required>
+      <input type="text" id="telefoneCadastro" placeholder="Telefone (DDD+número)" required>
+      <input type="password" id="senhaCadastro" placeholder="Senha" required>
+      <button type="submit">Cadastrar</button>
     </form>
-    <div class="auth-alt">
-      <p>Já tem conta? <a href="index.html">Faça login</a></p>
-    </div>
+    <p>Já tem conta? <a href="index.html">Faça login</a></p>
   </div>
   <script type="module" src="app.js"></script>
 </body>

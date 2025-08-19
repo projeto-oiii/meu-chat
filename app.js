@@ -1,8 +1,11 @@
-// Importando Firebase
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+// ===== Importações Firebase =====
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {
+  getFirestore, collection, addDoc, query, where,
+  getDocs, onSnapshot, doc, setDoc
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-// Config Firebase
+// ===== Configuração Firebase =====
 const firebaseConfig = {
   apiKey: "AIzaSyDFvYgca0_HRX0m_RSER0RgQ3LZDa6kaJ8",
   authDomain: "meu-chat-71046.firebaseapp.com",
@@ -15,24 +18,32 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Sessão
-function salvarSessao(user) { localStorage.setItem("usuarioAtivo", JSON.stringify(user)); }
-function pegarSessao() { return JSON.parse(localStorage.getItem("usuarioAtivo")); }
-function limparSessao() { localStorage.removeItem("usuarioAtivo"); }
+// ===== Variáveis Globais =====
+let usuario = JSON.parse(localStorage.getItem("usuario")) || null;
+let chatAtivo = null;
 
 // ===== Cadastro =====
 const cadastroForm = document.getElementById("cadastroForm");
 if (cadastroForm) {
   cadastroForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const nome = document.getElementById("nome").value;
-    const usuario = document.getElementById("usuario").value;
-    const telefone = document.getElementById("telefone").value;
-    const senha = document.getElementById("senha").value;
+    const nome = document.getElementById("nomeCadastro").value;
+    const usuarioCadastro = document.getElementById("usuarioCadastro").value;
+    const telefone = document.getElementById("telefoneCadastro").value;
+    const senha = document.getElementById("senhaCadastro").value;
 
-    await setDoc(doc(db, "users", usuario), { nome, usuario, telefone, senha });
-    alert("Cadastro realizado!");
-    window.location.href = "index.html";
+    try {
+      await setDoc(doc(db, "users", usuarioCadastro), {
+        nome,
+        usuario: usuarioCadastro,
+        telefone,
+        senha
+      });
+      alert("Cadastro realizado! Faça login.");
+      window.location.href = "index.html";
+    } catch (err) {
+      alert("Erro ao cadastrar: " + err.message);
+    }
   });
 }
 
@@ -41,134 +52,126 @@ const loginForm = document.getElementById("loginForm");
 if (loginForm) {
   loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const loginUser = document.getElementById("loginUser").value;
-    const senha = document.getElementById("loginSenha").value;
+    const loginInput = document.getElementById("loginInput").value;
+    const senhaLogin = document.getElementById("senhaLogin").value;
 
-    let q = query(collection(db, "users"), where("usuario", "==", loginUser));
-    let snap = await getDocs(q);
+    const q = query(collection(db, "users"),
+      where("usuario", "==", loginInput));
+    const q2 = query(collection(db, "users"),
+      where("telefone", "==", loginInput));
 
-    if (snap.empty) {
-      q = query(collection(db, "users"), where("telefone", "==", loginUser));
-      snap = await getDocs(q);
+    let resultado = await getDocs(q);
+    if (resultado.empty) {
+      resultado = await getDocs(q2);
     }
 
-    if (snap.empty) { alert("Usuário não encontrado"); return; }
-
-    const user = snap.docs[0].data();
-    if (user.senha !== senha) { alert("Senha incorreta"); return; }
-
-    salvarSessao(user);
-    window.location.href = "chat.html";
+    if (!resultado.empty) {
+      const userData = resultado.docs[0].data();
+      if (userData.senha === senhaLogin) {
+        usuario = userData;
+        localStorage.setItem("usuario", JSON.stringify(userData));
+        window.location.href = "chat.html";
+      } else {
+        alert("Senha incorreta.");
+      }
+    } else {
+      alert("Usuário não encontrado.");
+    }
   });
 }
 
 // ===== Chat =====
-const chatList = document.getElementById("chatList");
-const chatForm = document.getElementById("chatForm");
-const messagesContainer = document.getElementById("messagesContainer");
-const searchBtn = document.getElementById("searchBtn");
+const userNome = document.getElementById("userNome");
+if (userNome && usuario) {
+  userNome.innerText = usuario.usuario;
+}
+
+// Botão sair
 const logoutBtn = document.getElementById("logoutBtn");
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", () => {
+    localStorage.removeItem("usuario");
+    window.location.href = "index.html";
+  });
+}
 
-let chatAtivo = null;
-let usuario = pegarSessao();
+// Adicionar amigo/chat
+const addChatBtn = document.getElementById("addChatBtn");
+if (addChatBtn) {
+  addChatBtn.addEventListener("click", async () => {
+    const amigo = document.getElementById("novoChatInput").value.trim();
+    if (!amigo) return;
 
+    const chatId = [usuario.usuario, amigo].sort().join("_");
+    await setDoc(doc(db, "chats", chatId), {
+      membros: [usuario.usuario, amigo]
+    });
+
+    document.getElementById("novoChatInput").value = "";
+  });
+}
+
+// Listar chats
+const chatList = document.getElementById("chatList");
 if (chatList && usuario) {
-  document.getElementById("meUser").innerText = usuario.usuario;
-
-  // Mostrar lista de chats
   const q = query(collection(db, "chats"));
   onSnapshot(q, (snapshot) => {
     chatList.innerHTML = "";
-    snapshot.forEach(docSnap => {
-      const chat = docSnap.data();
-      if (chat.participantes.includes(usuario.usuario)) {
-        const div = document.createElement("div");
-        div.classList.add("p-3", "border-b", "cursor-pointer", "hover:bg-gray-100");
-        div.innerText = chat.participantes.filter(u => u !== usuario.usuario).join(", ") || "Chat Geral";
-        div.onclick = () => abrirChat(docSnap.id, chat);
-        chatList.appendChild(div);
+    snapshot.docs.forEach((docSnap) => {
+      const dados = docSnap.data();
+      if (dados.membros.includes(usuario.usuario)) {
+        const li = document.createElement("li");
+        li.innerText = dados.membros.filter(m => m !== usuario.usuario)[0] || "Chat Geral";
+        li.addEventListener("click", () => {
+          chatAtivo = docSnap.id;
+          document.getElementById("chatAtivoNome").innerText = li.innerText;
+          carregarMensagens();
+        });
+        chatList.appendChild(li);
       }
     });
   });
-
-  // Buscar e criar chat
-  searchBtn.addEventListener("click", async () => {
-    const search = document.getElementById("searchInput").value;
-    if (!search) return;
-
-    const q1 = query(collection(db, "users"), where("usuario", "==", search));
-    const q2 = query(collection(db, "users"), where("telefone", "==", search));
-
-    let snap = await getDocs(q1);
-    if (snap.empty) snap = await getDocs(q2);
-
-    if (snap.empty) { alert("Usuário não encontrado"); return; }
-
-    const amigo = snap.docs[0].data();
-
-    // Verificar se já existe chat
-    const qChat = query(collection(db, "chats"));
-    const snapChats = await getDocs(qChat);
-    let chatExistente = null;
-
-    snapChats.forEach(docSnap => {
-      const chat = docSnap.data();
-      if (chat.participantes.includes(usuario.usuario) && chat.participantes.includes(amigo.usuario)) {
-        chatExistente = docSnap;
-      }
-    });
-
-    if (chatExistente) {
-      abrirChat(chatExistente.id, chatExistente.data());
-    } else {
-      const novoChat = await addDoc(collection(db, "chats"), {
-        participantes: [usuario.usuario, amigo.usuario]
-      });
-      abrirChat(novoChat.id, { participantes: [usuario.usuario, amigo.usuario] });
-    }
-  });
-
-  // Enviar mensagem
-  if (chatForm) {
-    chatForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (!chatAtivo) return;
-      const texto = document.getElementById("mensagemInput").value;
-      await addDoc(collection(db, "chats", chatAtivo, "mensagens"), {
-        usuario: usuario.usuario,
-        texto,
-        timestamp: new Date()
-      });
-      chatForm.reset();
-    });
-  }
-
-  // Logout
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", () => {
-      limparSessao();
-      window.location.href = "index.html";
-    });
-  }
 }
 
-// ===== Abrir Chat =====
-function abrirChat(chatId, chat) {
-  chatAtivo = chatId;
-  document.getElementById("chatTitle").innerText =
-    chat.participantes.filter(u => u !== usuario.usuario).join(", ") || "Chat Geral";
-
-  const q = query(collection(db, "chats", chatId, "mensagens"), orderBy("timestamp", "asc"));
+// Carregar mensagens
+function carregarMensagens() {
+  if (!chatAtivo) return;
+  const messagesContainer = document.getElementById("messagesContainer");
+  const q = query(collection(db, "chats", chatAtivo, "mensagens"));
   onSnapshot(q, (snapshot) => {
     messagesContainer.innerHTML = "";
-    snapshot.forEach(msgSnap => {
-      const msg = msgSnap.data();
+    snapshot.docs.forEach((docSnap) => {
+      const msg = docSnap.data();
       const div = document.createElement("div");
-      div.classList.add("p-2", "my-1", "rounded", "max-w-xs");
-      div.classList.add(msg.usuario === usuario.usuario ? "bg-green-200 ml-auto" : "bg-white");
+      if (msg.usuario === usuario.usuario) {
+        div.classList.add("bg-me");
+      } else {
+        div.classList.add("bg-other");
+      }
       div.innerText = `${msg.usuario}: ${msg.texto}`;
       messagesContainer.appendChild(div);
     });
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  });
+}
+
+// Enviar mensagem
+const chatForm = document.getElementById("chatForm");
+if (chatForm) {
+  chatForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!chatAtivo) {
+      alert("Selecione um chat primeiro!");
+      return;
+    }
+    const texto = document.getElementById("mensagemInput").value.trim();
+    if (!texto) return;
+
+    await addDoc(collection(db, "chats", chatAtivo, "mensagens"), {
+      usuario: usuario.usuario,
+      texto,
+      timestamp: new Date()
+    });
+    chatForm.reset();
   });
 }
