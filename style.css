@@ -119,6 +119,25 @@ body {
   background: #075e54;
   color: white;
   padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.chat-header h3 {
+  margin: 0;
+  flex: 1;
+}
+.header-action {
+  background: #128C7E;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.header-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .messages {
