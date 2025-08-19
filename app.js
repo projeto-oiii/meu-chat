@@ -253,8 +253,9 @@ if (saveContactBtn) {
 
 // ===== Abrir chat =====
 function abrirChat(id, amigo) {
-  // Sempre encerra listeners antigos antes de abrir novos
-  if (unsubscribeMsgs) { unsubscribeMsgs(); unsubscribeMsgs = null; }
+  console.log("🔁 Abrindo chat:", id, "com", amigo);
+
+  if (unsubscribeMsgs) { console.log("🛑 Encerrando listener antigo de mensagens"); unsubscribeMsgs(); unsubscribeMsgs = null; }
   if (typingUnsub) { typingUnsub(); typingUnsub = null; }
   if (presenceUnsub) { presenceUnsub(); presenceUnsub = null; }
 
@@ -277,11 +278,18 @@ function carregarMensagens() {
   const messagesContainer = document.getElementById("messagesContainer");
   messagesContainer.innerHTML = "";
 
+  console.log("🛑 Encerrando listener antigo de mensagens");
   if (unsubscribeMsgs) { unsubscribeMsgs(); unsubscribeMsgs = null; }
   otherLastRead = null;
 
-  const q = query(collection(db, "chats", chatAtivo, "mensagens"), orderBy("timestamp", "asc"));
+  const q = query(
+    collection(db, "chats", chatAtivo, "mensagens"),
+    orderBy("timestamp", "asc")
+  );
+
+  console.log("▶️ Criando novo listener de mensagens para chat:", chatAtivo);
   unsubscribeMsgs = onSnapshot(q, (snapshot) => {
+    console.log("📩 Snapshot recebido - mensagens:", snapshot.docs.length);
     messagesContainer.innerHTML = "";
     snapshot.docs.forEach((docSnap) => {
       const msg = docSnap.data();
