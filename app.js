@@ -240,11 +240,16 @@ function watchPresenceDoOutro() {
 }
 
 // ================================
-// Inicialização do Chat
+// Inicialização do Chat (somente na chat.html)
 // ================================
-if ($("userNome")) {
-  $("userNome").innerText = usuario?.usuario || "Sem usuário";
+if (window.location.pathname.includes("chat.html")) {
+  if ($("userNome")) {
+    $("userNome").innerText = usuario?.usuario || "Sem usuário";
 
-  const q = query(collection(db, "chats"), where("membros", "array-contains", usuario.usuario));
-  onSnapshot(q, renderListaChatsFromSnap);
+    const q = query(
+      collection(db, "chats"),
+      where("membros", "array-contains", usuario.usuario)
+    );
+    onSnapshot(q, renderListaChatsFromSnap);
+  }
 }
