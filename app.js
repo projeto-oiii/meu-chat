@@ -19,14 +19,15 @@ const db = getFirestore(app);
 
 // ===== Estado simples no client =====
 let usuario = JSON.parse(localStorage.getItem("usuario")) || null;
-let chatAtivo = null;       // id do chat "a_b"
-let contatoAtivo = null;    // nickname do outro
-let apelidos = {};          // cache { contato: "apelido salvo" }
-let otherLastRead = null;   // timestamp de leitura do outro
+let chatAtivo = null;
+let contatoAtivo = null;
+let apelidos = {};
+let otherLastRead = null;
+
 let presenceUnsub = null;
 let typingUnsub = null;
 let typingTimer = null;
-let unsubscribeMsgs = null; // 👈 listener de mensagens
+let unsubscribeMsgs = null;
 let unsubscribeChats = null;
 
 // ===== Utils =====
@@ -252,11 +253,10 @@ if (saveContactBtn) {
 
 // ===== Abrir chat =====
 function abrirChat(id, amigo) {
-  // Sempre encerra listener antigo antes de abrir outro
-  if (unsubscribeMsgs) {
-    unsubscribeMsgs();
-    unsubscribeMsgs = null;
-  }
+  // Sempre encerra listeners antigos antes de abrir novos
+  if (unsubscribeMsgs) { unsubscribeMsgs(); unsubscribeMsgs = null; }
+  if (typingUnsub) { typingUnsub(); typingUnsub = null; }
+  if (presenceUnsub) { presenceUnsub(); presenceUnsub = null; }
 
   chatAtivo = id;
   contatoAtivo = amigo;
@@ -277,7 +277,7 @@ function carregarMensagens() {
   const messagesContainer = document.getElementById("messagesContainer");
   messagesContainer.innerHTML = "";
 
-  if (unsubscribeMsgs) unsubscribeMsgs();
+  if (unsubscribeMsgs) { unsubscribeMsgs(); unsubscribeMsgs = null; }
   otherLastRead = null;
 
   const q = query(collection(db, "chats", chatAtivo, "mensagens"), orderBy("timestamp", "asc"));
@@ -311,7 +311,7 @@ function carregarMensagens() {
   });
 }
 
-// Enviar mensagem
+// ===== Enviar mensagem =====
 const chatForm = document.getElementById("chatForm");
 if (chatForm) {
   chatForm.addEventListener("submit", async (e) => {
