@@ -2,28 +2,62 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <h2>Bem-vindo ao Chat</h2>
-  <div id="mensagens"></div>
 
+  <!-- Área onde aparecem as mensagens -->
+  <div id="mensagens" class="mensagens"></div>
+
+  <!-- Campo para escrever mensagem -->
   <input type="text" id="mensagem" placeholder="Digite sua mensagem">
   <button id="btnEnviar">Enviar</button>
 
+  <!-- Botão de logout -->
+  <button id="btnSair">Sair</button>
+
+  <!-- Script do chat -->
   <script type="module">
     import { auth } from "./app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp } 
-      from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+    import { 
+      onAuthStateChanged, 
+      signOut 
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { 
+      getFirestore, 
+      collection, 
+      addDoc, 
+      onSnapshot, 
+      serverTimestamp, 
+      query, 
+      orderBy 
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
     const db = getFirestore();
 
     const mensagensDiv = document.getElementById("mensagens");
     const inputMensagem = document.getElementById("mensagem");
     const btnEnviar = document.getElementById("btnEnviar");
+    const btnSair = document.getElementById("btnSair");
 
-    // Enviar mensagem
+    // 🔑 Verifica se usuário está logado
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "index.html"; // se não tiver login, volta pro index
+      }
+    });
+
+    // 🚪 Logout
+    btnSair.addEventListener("click", () => {
+      signOut(auth).then(() => {
+        window.location.href = "index.html";
+      });
+    });
+
+    // 📩 Enviar mensagem
     btnEnviar.addEventListener("click", async () => {
       if (inputMensagem.value.trim() !== "") {
         await addDoc(collection(db, "mensagens"), {
@@ -35,8 +69,9 @@
       }
     });
 
-    // Mostrar mensagens em tempo real
-    onSnapshot(collection(db, "mensagens"), (snapshot) => {
+    // 👀 Mostrar mensagens em tempo real (ordenadas por data)
+    const q = query(collection(db, "mensagens"), orderBy("criadoEm"));
+    onSnapshot(q, (snapshot) => {
       mensagensDiv.innerHTML = "";
       snapshot.forEach((doc) => {
         const msg = doc.data();

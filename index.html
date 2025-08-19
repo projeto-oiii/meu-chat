@@ -2,33 +2,44 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Meu Chat</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <h2>Login</h2>
-  <input type="email" id="emailLogin" placeholder="Email">
-  <input type="password" id="senhaLogin" placeholder="Senha">
+
+  <input type="email" id="email" placeholder="Digite seu e-mail">
+  <input type="password" id="senha" placeholder="Digite sua senha">
   <button id="btnLogin">Entrar</button>
 
-  <p>Não tem conta? <a href="cadastro.html">Cadastre-se</a></p>
+  <p>Não tem conta? <a href="cadastro.html">Cadastre-se aqui</a></p>
 
   <script type="module">
-    import { auth, signInWithEmailAndPassword } from "./app.js";
+    import { auth } from "./app.js";
+    import { 
+      signInWithEmailAndPassword,
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
-    const emailLogin = document.getElementById("emailLogin");
-    const senhaLogin = document.getElementById("senhaLogin");
+    const emailInput = document.getElementById("email");
+    const senhaInput = document.getElementById("senha");
     const btnLogin = document.getElementById("btnLogin");
 
+    // 🔑 Login
     btnLogin.addEventListener("click", () => {
-      signInWithEmailAndPassword(auth, emailLogin.value, senhaLogin.value)
+      signInWithEmailAndPassword(auth, emailInput.value, senhaInput.value)
         .then(() => {
-          alert("Login realizado com sucesso!");
-          window.location.href = "chat.html";
+          window.location.href = "chat.html"; 
         })
-        .catch((error) => {
-          alert("Erro ao logar: " + error.message);
-        });
+        .catch(err => alert("Erro: " + err.message));
+    });
+
+    // ✅ Se já estiver logado, pula direto pro chat
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        window.location.href = "chat.html";
+      }
     });
   </script>
 </body>
