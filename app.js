@@ -170,7 +170,7 @@ if (addChatBtn) {
   });
 }
 
-// ===== Lista de conversas (corrigido – sem duplicação) =====
+// ===== Lista de conversas =====
 const chatList = document.getElementById("chatList");
 let unsubscribeChats = null;
 let lastChatsSnap = null;
@@ -186,7 +186,6 @@ function startChatsWatch() {
 }
 
 async function renderListaChatsFromSnap(snap) {
-  // Sempre limpa a lista antes de renderizar
   chatList.innerHTML = "";
 
   for (const docSnap of snap.docs) {
@@ -195,7 +194,6 @@ async function renderListaChatsFromSnap(snap) {
     const amigo = (dados.membros || []).find(m => m !== usuario.usuario) || "Chat";
     const nomeExibicao = apelidos[amigo] || amigo;
 
-    // preview da última mensagem
     let snippet = "";
     try {
       const lastQ = query(
@@ -207,7 +205,6 @@ async function renderListaChatsFromSnap(snap) {
       snippet = lastSnap.empty ? "" : (lastSnap.docs[0].data().texto || "");
     } catch (_) {}
 
-    // cria item da lista
     const li = document.createElement("li");
     li.dataset.chatId = chatId;
     li.dataset.amigo = amigo;
@@ -254,6 +251,8 @@ if (saveContactBtn) {
 
 // ===== Abrir chat =====
 function abrirChat(id, amigo) {
+  if (chatAtivo === id) return; // ✅ Evita duplicar listeners ao clicar de novo no mesmo contato
+
   chatAtivo = id;
   contatoAtivo = amigo;
   document.getElementById("chatAtivoNome").innerText = apelidos[amigo] || amigo;
