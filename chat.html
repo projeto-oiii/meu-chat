@@ -2,23 +2,47 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Meu Chat</title>
+  <title>Chat</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 </head>
 <body>
-  <div class="container">
-    <h2>Chat</h2>
-    <button id="logout">Sair</button>
-    <div id="messages"></div>
-    <form id="messageForm">
-      <input type="text" id="messageInput" placeholder="Digite sua mensagem..." required>
-      <button type="submit">Enviar</button>
-    </form>
-  </div>
-  <script src="app.js"></script>
+  <h2>Bem-vindo ao Chat</h2>
+  <div id="mensagens"></div>
+
+  <input type="text" id="mensagem" placeholder="Digite sua mensagem">
+  <button id="btnEnviar">Enviar</button>
+
+  <script type="module">
+    import { auth } from "./app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp } 
+      from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+    const db = getFirestore();
+
+    const mensagensDiv = document.getElementById("mensagens");
+    const inputMensagem = document.getElementById("mensagem");
+    const btnEnviar = document.getElementById("btnEnviar");
+
+    // Enviar mensagem
+    btnEnviar.addEventListener("click", async () => {
+      if (inputMensagem.value.trim() !== "") {
+        await addDoc(collection(db, "mensagens"), {
+          texto: inputMensagem.value,
+          usuario: auth.currentUser.email,
+          criadoEm: serverTimestamp()
+        });
+        inputMensagem.value = "";
+      }
+    });
+
+    // Mostrar mensagens em tempo real
+    onSnapshot(collection(db, "mensagens"), (snapshot) => {
+      mensagensDiv.innerHTML = "";
+      snapshot.forEach((doc) => {
+        const msg = doc.data();
+        mensagensDiv.innerHTML += `<p><b>${msg.usuario}:</b> ${msg.texto}</p>`;
+      });
+    });
+  </script>
 </body>
 </html>

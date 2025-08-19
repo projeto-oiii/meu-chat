@@ -6,14 +6,30 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="form-container">
-    <h2>Login</h2>
-    <input type="text" id="login" placeholder="Usuário ou Telefone" required>
-    <input type="password" id="senhaLogin" placeholder="Senha" required>
-    <button onclick="login()">Entrar</button>
-    <p>Não tem conta? <a href="cadastro.html">Cadastre-se</a></p>
-  </div>
+  <h2>Login</h2>
+  <input type="email" id="emailLogin" placeholder="Email">
+  <input type="password" id="senhaLogin" placeholder="Senha">
+  <button id="btnLogin">Entrar</button>
 
-  <script type="module" src="app.js"></script>
+  <p>Não tem conta? <a href="cadastro.html">Cadastre-se</a></p>
+
+  <script type="module">
+    import { auth, signInWithEmailAndPassword } from "./app.js";
+
+    const emailLogin = document.getElementById("emailLogin");
+    const senhaLogin = document.getElementById("senhaLogin");
+    const btnLogin = document.getElementById("btnLogin");
+
+    btnLogin.addEventListener("click", () => {
+      signInWithEmailAndPassword(auth, emailLogin.value, senhaLogin.value)
+        .then(() => {
+          alert("Login realizado com sucesso!");
+          window.location.href = "chat.html";
+        })
+        .catch((error) => {
+          alert("Erro ao logar: " + error.message);
+        });
+    });
+  </script>
 </body>
 </html>

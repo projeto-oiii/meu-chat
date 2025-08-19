@@ -6,16 +6,32 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="form-container">
-    <h2>Cadastro</h2>
-    <input type="text" id="nome" placeholder="Nome completo" required>
-    <input type="text" id="usuario" placeholder="Nome de usuário" required>
-    <input type="text" id="telefone" placeholder="Telefone (DDD+número)" required>
-    <input type="password" id="senha" placeholder="Senha" required>
-    <button onclick="cadastrar()">Cadastrar</button>
-    <p>Já tem conta? <a href="index.html">Faça login</a></p>
-  </div>
+  <h2>Cadastro</h2>
+  <input type="text" id="nomeCadastro" placeholder="Nome completo">
+  <input type="text" id="usuarioCadastro" placeholder="Nome de usuário">
+  <input type="email" id="emailCadastro" placeholder="Email">
+  <input type="password" id="senhaCadastro" placeholder="Senha">
+  <button id="btnCadastrar">Cadastrar</button>
 
-  <script type="module" src="app.js"></script>
+  <p>Já tem conta? <a href="index.html">Faça login</a></p>
+
+  <script type="module">
+    import { auth, createUserWithEmailAndPassword } from "./app.js";
+
+    const emailCadastro = document.getElementById("emailCadastro");
+    const senhaCadastro = document.getElementById("senhaCadastro");
+    const btnCadastrar = document.getElementById("btnCadastrar");
+
+    btnCadastrar.addEventListener("click", () => {
+      createUserWithEmailAndPassword(auth, emailCadastro.value, senhaCadastro.value)
+        .then(() => {
+          alert("Usuário cadastrado com sucesso!");
+          window.location.href = "index.html";
+        })
+        .catch((error) => {
+          alert("Erro ao cadastrar: " + error.message);
+        });
+    });
+  </script>
 </body>
 </html>
