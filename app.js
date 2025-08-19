@@ -42,11 +42,6 @@ async function salvarContatoAs(ownerUser, contatoNickname, apelido) {
     apelido
   });
 }
-async function getApelidoOnce(ownerUser, contatoNickname) {
-  const ref = doc(db, "contacts", ownerUser, "lista", contatoNickname);
-  const snap = await getDoc(ref);
-  return snap.exists() ? (snap.data().apelido || contatoNickname) : contatoNickname;
-}
 function watchApelidos(ownerUser) {
   const colRef = collection(db, "contacts", ownerUser, "lista");
   onSnapshot(colRef, (snap) => {
@@ -58,7 +53,8 @@ function watchApelidos(ownerUser) {
       const header = document.getElementById("chatAtivoNome");
       if (header) header.innerText = apelidos[contatoAtivo] || contatoAtivo;
     }
-    renderListaChats();
+    // re-renderiza lista com novos apelidos
+    if (lastChatsSnap) renderListaChatsFromSnap(lastChatsSnap);
   });
 }
 
@@ -125,7 +121,7 @@ if (loginForm) {
   });
 }
 
-// ===== Proteção simples: se entrar em chat.html sem login, redireciona =====
+// ===== Proteção simples =====
 if (document.body && location.pathname.endsWith("chat.html")) {
   if (!usuario) {
     location.href = "index.html";
@@ -179,56 +175,73 @@ if (addChatBtn) {
   });
 }
 
-// ===== Lista de conversas =====
+// ===== Lista de conversas (corrigida) =====
 const chatList = document.getElementById("chatList");
 let unsubscribeChats = null;
+let lastChatsSnap = null;
 
 function startChatsWatch() {
   if (!chatList || !usuario) return;
   const q = query(collection(db, "chats"), where("membros", "array-contains", usuario.usuario));
   if (unsubscribeChats) unsubscribeChats();
-  unsubscribeChats = onSnapshot(q, renderListaChats);
+  unsubscribeChats = onSnapshot(q, (snap) => {
+    lastChatsSnap = snap;
+    renderListaChatsFromSnap(snap);
+  });
 }
 
-async function renderListaChats() {
-  if (!chatList || !usuario) return;
-  const q = query(collection(db, "chats"), where("membros", "array-contains", usuario.usuario));
-  const snap = await getDocs(q);
-
-  chatList.innerHTML = "";
+async function renderListaChatsFromSnap(snap) {
+  chatList.innerHTML = ""; // limpa a lista antes de desenhar
 
   for (const docSnap of snap.docs) {
     const dados = docSnap.data();
     const amigo = (dados.membros || []).find(m => m !== usuario.usuario) || "Chat";
     const nomeExibicao = apelidos[amigo] || amigo;
 
-    // última mensagem
-    const lastQ = query(collection(db, "chats", docSnap.id, "mensagens"), orderBy("timestamp", "desc"), limit(1));
-    const lastSnap = await getDocs(lastQ);
-    const last = lastSnap.empty ? null : lastSnap.docs[0].data();
-    const snippet = last ? (last.texto || "") : "";
+    // preview da última mensagem
+    let snippet = "";
+    try {
+      const lastQ = query(
+        collection(db, "chats", docSnap.id, "mensagens"),
+        orderBy("timestamp", "desc"),
+        limit(1)
+      );
+      const lastSnap = await getDocs(lastQ);
+      snippet = lastSnap.empty ? "" : (lastSnap.docs[0].data().texto || "");
+    } catch (_) {}
 
     const li = document.createElement("li");
+    li.dataset.chatId = docSnap.id;
+    li.dataset.amigo = amigo;
     li.innerHTML = `
       <div><strong>${nomeExibicao}</strong></div>
       <div class="muted tiny" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:95%">${snippet}</div>
     `;
-
-    li.addEventListener("click", () => {
-      abrirChat(docSnap.id, amigo);
-    });
-
-    // salvar contato por clique direito
-    li.addEventListener("contextmenu", async (e) => {
-      e.preventDefault();
-      const atual = apelidos[amigo] || amigo;
-      const novo = prompt("Salvar contato como:", atual);
-      if (novo && novo.trim()) await salvarContatoAs(usuario.usuario, amigo, novo.trim());
-    });
-
     chatList.appendChild(li);
   }
 }
+
+// Delegação de eventos: só um listener para toda lista
+if (chatList) {
+  chatList.onclick = (e) => {
+    const li = e.target.closest("li[data-chat-id]");
+    if (!li) return;
+    abrirChat(li.dataset.chatId, li.dataset.amigo);
+  };
+
+  chatList.oncontextmenu = async (e) => {
+    const li = e.target.closest("li[data-chat-id]");
+    if (!li) return;
+    e.preventDefault();
+    const amigo = li.dataset.amigo;
+    const atual = apelidos[amigo] || amigo;
+    const novo = prompt("Salvar contato como:", atual);
+    if (novo && novo.trim()) {
+      await salvarContatoAs(usuario.usuario, amigo, novo.trim());
+    }
+  };
+}
+
 startChatsWatch();
 
 // ===== “Salvar contato” no header =====
@@ -250,10 +263,8 @@ function abrirChat(id, amigo) {
   const saveBtn = document.getElementById("saveContactBtn");
   if (saveBtn) saveBtn.disabled = false;
 
-  // atualiza minha leitura
   updateDoc(doc(db, "chats", chatAtivo), { [`lastRead.${usuario.usuario}`]: serverTimestamp() }).catch(()=>{});
 
-  // listeners
   carregarMensagens();
   watchTypingDoOutro();
   watchPresenceDoOutro();
@@ -264,11 +275,9 @@ let unsubscribeMsgs = null;
 
 function carregarMensagens() {
   if (!chatAtivo) return;
-
   const messagesContainer = document.getElementById("messagesContainer");
   messagesContainer.innerHTML = "";
 
-  // observar doc do chat para saber lastRead do outro
   const chatDocRef = doc(db, "chats", chatAtivo);
   onSnapshot(chatDocRef, (d) => {
     const data = d.data() || {};
@@ -277,7 +286,6 @@ function carregarMensagens() {
   });
 
   const q = query(collection(db, "chats", chatAtivo, "mensagens"), orderBy("timestamp", "asc"));
-
   if (unsubscribeMsgs) unsubscribeMsgs();
   unsubscribeMsgs = onSnapshot(q, (snapshot) => {
     messagesContainer.innerHTML = "";
@@ -287,7 +295,6 @@ function carregarMensagens() {
       div.classList.add("message");
       const isMe = msg.usuario === usuario.usuario;
       div.classList.add(isMe ? "bg-me" : "bg-other");
-      div.classList.add(isMe ? "me" : "other");
 
       const time = msg.timestamp?.toDate ? msg.timestamp.toDate() : new Date();
       const hh = String(time.getHours()).padStart(2, '0');
@@ -295,7 +302,6 @@ function carregarMensagens() {
 
       let ticks = "";
       if (isMe) {
-        // ✓ sempre; ✓✓ quando lido (<= otherLastRead)
         const read = otherLastRead && msg.timestamp && (msg.timestamp.toMillis?.() || 0) <= (otherLastRead.toMillis?.() || 0);
         ticks = read ? "✓✓" : "✓";
       }
@@ -327,7 +333,6 @@ if (chatForm) {
       timestamp: serverTimestamp()
     });
 
-    // atualiza meu lastRead
     updateDoc(doc(db, "chats", chatAtivo), { [`lastRead.${usuario.usuario}`]: serverTimestamp() }).catch(()=>{});
 
     input.value = "";
@@ -358,12 +363,11 @@ function watchTypingDoOutro() {
   const ref = doc(db, "chats", chatAtivo, "typing", outro);
   typingUnsub = onSnapshot(ref, (snap) => {
     const d = snap.data();
-    const isTyping = !!d?.typing;
-    typingDiv.textContent = isTyping ? `${apelidos[outro] || outro} está digitando…` : "";
+    typingDiv.textContent = d?.typing ? `${apelidos[outro] || outro} está digitando…` : "";
   });
 }
 
-// ===== Presence (heurística por último acesso) =====
+// ===== Presence =====
 function watchPresenceDoOutro() {
   const badge = document.getElementById("presenceBadge");
   if (presenceUnsub) presenceUnsub();
@@ -371,13 +375,12 @@ function watchPresenceDoOutro() {
   presenceUnsub = onSnapshot(ref, (snap) => {
     const d = snap.data() || {};
     const last = d.ultimoAcesso?.toMillis?.() || 0;
-    const online = Date.now() - last < 60_000; // 60s
+    const online = Date.now() - last < 60_000;
     badge.textContent = online ? 'on' : 'off';
     badge.classList.toggle('online', online);
     badge.classList.toggle('offline', !online);
   });
 
-  // atualiza meu último acesso periodicamente
   setInterval(() => {
     if (usuario?.usuario) updateDoc(doc(db, "users", usuario.usuario), { ultimoAcesso: serverTimestamp() }).catch(()=>{});
   }, 30_000);
