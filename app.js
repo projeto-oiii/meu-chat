@@ -1,4 +1,10 @@
-// === Firebase Config ===
+// === Firebase Modular ===
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+import {
+  getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc,
+  query, where, orderBy, onSnapshot, updateDoc, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+
 const firebaseConfig = {
   apiKey: "SUA_API_KEY",
   authDomain: "SEU_PROJECT.firebaseapp.com",
@@ -7,8 +13,9 @@ const firebaseConfig = {
   messagingSenderId: "SENDER_ID",
   appId: "APP_ID"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 let usuarioLogado = localStorage.getItem("usuarioLogado");
 let chatAtual = null;
@@ -21,8 +28,10 @@ if (loginForm) {
     const usuario = document.getElementById("loginUsuario").value.trim();
     const senha = document.getElementById("loginSenha").value;
 
-    const userDoc = await db.collection("users").doc(usuario).get();
-    if (userDoc.exists && userDoc.data().senha === senha) {
+    const userRef = doc(db, "users", usuario);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists() && userSnap.data().senha === senha) {
       localStorage.setItem("usuarioLogado", usuario);
       window.location.href = "chat.html";
     } else {
@@ -39,14 +48,16 @@ if (cadastroForm) {
     const usuario = document.getElementById("cadastroUsuario").value.trim();
     const senha = document.getElementById("cadastroSenha").value;
 
-    const userDoc = await db.collection("users").doc(usuario).get();
-    if (userDoc.exists) {
+    const userRef = doc(db, "users", usuario);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
       alert("Usuário já existe!");
     } else {
-      await db.collection("users").doc(usuario).set({
+      await setDoc(userRef, {
         usuario,
         senha,
-        criadoEm: new Date()
+        criadoEm: serverTimestamp()
       });
       alert("Cadastro realizado!");
       window.location.href = "index.html";
@@ -67,17 +78,15 @@ if (sairBtn) {
 const listaContatos = document.getElementById("listaContatos");
 const nomeContato = document.getElementById("nomeContato");
 const messagesBox = document.getElementById("messages");
-const statusContato = document.getElementById("statusContato");
-const typingBox = document.getElementById("typing");
-
 const notifySound = document.getElementById("notifySound");
 
+// === Som de notificação ===
 function playSound() {
   if (notifySound) notifySound.play().catch(() => {});
 }
 
 // === Renderizar mensagens ===
-function renderMessage(msg, usuario) {
+function renderMessage(msg) {
   const div = document.createElement("div");
   div.classList.add("message");
   div.classList.add(msg.de === usuarioLogado ? "bg-me" : "bg-other");
@@ -89,18 +98,20 @@ function renderMessage(msg, usuario) {
   const meta = document.createElement("div");
   meta.classList.add("meta");
 
-  const time = new Date(msg.timestamp?.toDate());
-  let timeStr = time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  let timeStr = "";
+  if (msg.timestamp?.toDate) {
+    const time = msg.timestamp.toDate();
+    timeStr = time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
 
   let status = "";
   if (msg.de === usuarioLogado) {
     if (msg.status === "enviado") status = "✔";
     if (msg.status === "recebido") status = "✔✔";
-    if (msg.status === "lido") status = "✔✔";
+    if (msg.status === "lido") status = `<span style="color:#4fc3f7">✔✔</span>`;
   }
 
-  meta.innerHTML = `${timeStr} <span style="color:${msg.status==="lido"?"#4fc3f7":"inherit"}">${status}</span>`;
-
+  meta.innerHTML = `${timeStr} ${status}`;
   div.appendChild(body);
   div.appendChild(meta);
 
@@ -114,45 +125,46 @@ async function abrirChat(idChat, contato) {
   nomeContato.innerText = contato;
   messagesBox.innerHTML = "";
 
-  // marcar mensagens como lidas
-  const snap = await db.collection("chats").doc(idChat).collection("mensagens").get();
-  snap.forEach(doc => {
-    const data = doc.data();
-    if (data.de !== usuarioLogado && data.status !== "lido") {
-      doc.ref.update({ status: "lido" });
-    }
-  });
+  const msgsRef = collection(db, "chats", idChat, "mensagens");
+  const q = query(msgsRef, orderBy("timestamp"));
 
-  db.collection("chats").doc(idChat).collection("mensagens")
-    .orderBy("timestamp")
-    .onSnapshot(snapshot => {
-      messagesBox.innerHTML = "";
-      snapshot.forEach(doc => {
-        const msg = doc.data();
-        renderMessage(msg, contato);
-        if (msg.de !== usuarioLogado && msg.status === "enviado") {
-          doc.ref.update({ status: "recebido" });
-          playSound();
-        }
-      });
+  onSnapshot(q, async (snapshot) => {
+    messagesBox.innerHTML = "";
+    snapshot.forEach(async (docSnap) => {
+      const msg = docSnap.data();
+      renderMessage(msg);
+
+      // marcar como recebido
+      if (msg.de !== usuarioLogado && msg.status === "enviado") {
+        await updateDoc(docSnap.ref, { status: "recebido" });
+        playSound();
+      }
     });
+
+    // marcar como lido todas
+    snapshot.forEach(async (docSnap) => {
+      const msg = docSnap.data();
+      if (msg.de !== usuarioLogado && msg.status !== "lido") {
+        await updateDoc(docSnap.ref, { status: "lido" });
+      }
+    });
+  });
 }
 
 // === Listar Contatos ===
 if (listaContatos) {
-  db.collection("chats")
-    .where("membros", "array-contains", usuarioLogado)
-    .onSnapshot(snapshot => {
-      listaContatos.innerHTML = "";
-      snapshot.forEach(doc => {
-        const dados = doc.data();
-        const contato = dados.membros.find(m => m !== usuarioLogado);
-        const li = document.createElement("li");
-        li.innerText = contato;
-        li.addEventListener("click", () => abrirChat(doc.id, contato));
-        listaContatos.appendChild(li);
-      });
+  const q = query(collection(db, "chats"), where("membros", "array-contains", usuarioLogado));
+  onSnapshot(q, (snapshot) => {
+    listaContatos.innerHTML = "";
+    snapshot.forEach(docSnap => {
+      const dados = docSnap.data();
+      const contato = dados.membros.find(m => m !== usuarioLogado);
+      const li = document.createElement("li");
+      li.innerText = contato;
+      li.addEventListener("click", () => abrirChat(docSnap.id, contato));
+      listaContatos.appendChild(li);
     });
+  });
 }
 
 // === Enviar Mensagem ===
@@ -163,10 +175,10 @@ if (enviarBtn) {
     const texto = input.value.trim();
     if (!texto || !chatAtual) return;
 
-    await db.collection("chats").doc(chatAtual).collection("mensagens").add({
+    await addDoc(collection(db, "chats", chatAtual, "mensagens"), {
       de: usuarioLogado,
       texto,
-      timestamp: new Date(),
+      timestamp: serverTimestamp(),
       status: "enviado"
     });
 
