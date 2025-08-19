@@ -3,80 +3,118 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chat</title>
+  <title>Meu Chat - WhatsApp Clone</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h2>Bem-vindo ao Chat</h2>
+  <div class="chat-container">
 
-  <!-- Área onde aparecem as mensagens -->
-  <div id="mensagens" class="mensagens"></div>
+    <!-- Sidebar (lista de conversas) -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h3>Conversas</h3>
+        <button id="btnLogout">Sair</button>
+      </div>
+      <input type="text" placeholder="Pesquisar ou começar nova conversa" class="search">
+      <div id="conversas" class="conversas"></div>
+    </div>
 
-  <!-- Campo para escrever mensagem -->
-  <input type="text" id="mensagem" placeholder="Digite sua mensagem">
-  <button id="btnEnviar">Enviar</button>
+    <!-- Área de conversa -->
+    <div class="chat-area">
+      <div class="chat-header">
+        <h3 id="chatTitulo">Selecione uma conversa</h3>
+      </div>
+      <div id="mensagens" class="mensagens"></div>
+      <div class="chat-input">
+        <input type="text" id="mensagemInput" placeholder="Digite sua mensagem">
+        <button id="btnEnviar">Enviar</button>
+      </div>
+    </div>
 
-  <!-- Botão de logout -->
-  <button id="btnSair">Sair</button>
+  </div>
 
-  <!-- Script do chat -->
   <script type="module">
     import { auth } from "./app.js";
     import { 
-      onAuthStateChanged, 
-      signOut 
+      signOut, onAuthStateChanged 
     } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
     import { 
-      getFirestore, 
-      collection, 
-      addDoc, 
-      onSnapshot, 
-      serverTimestamp, 
-      query, 
-      orderBy 
+      getFirestore, collection, addDoc, query, orderBy, onSnapshot 
     } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
     const db = getFirestore();
-
+    const btnLogout = document.getElementById("btnLogout");
+    const conversasDiv = document.getElementById("conversas");
     const mensagensDiv = document.getElementById("mensagens");
-    const inputMensagem = document.getElementById("mensagem");
+    const msgInput = document.getElementById("mensagemInput");
     const btnEnviar = document.getElementById("btnEnviar");
-    const btnSair = document.getElementById("btnSair");
+    const chatTitulo = document.getElementById("chatTitulo");
 
-    // 🔑 Verifica se usuário está logado
+    let usuario = null;
+    let conversaAtiva = null;
+
+    // 🔐 Verifica se está logado
     onAuthStateChanged(auth, (user) => {
       if (!user) {
-        window.location.href = "index.html"; // se não tiver login, volta pro index
+        window.location.href = "index.html";
+      } else {
+        usuario = user;
+        carregarConversas();
       }
     });
 
     // 🚪 Logout
-    btnSair.addEventListener("click", () => {
-      signOut(auth).then(() => {
-        window.location.href = "index.html";
+    btnLogout.addEventListener("click", () => {
+      signOut(auth);
+    });
+
+    // 📂 Carregar conversas
+    function carregarConversas() {
+      conversasDiv.innerHTML = "";
+
+      const lista = ["Amigos", "Família", "Trabalho"]; // exemplo fixo de grupos
+      lista.forEach(nome => {
+        const div = document.createElement("div");
+        div.className = "conversa-item";
+        div.textContent = nome;
+        div.addEventListener("click", () => abrirConversa(nome));
+        conversasDiv.appendChild(div);
       });
-    });
+    }
 
-    // 📩 Enviar mensagem
-    btnEnviar.addEventListener("click", async () => {
-      if (inputMensagem.value.trim() !== "") {
-        await addDoc(collection(db, "mensagens"), {
-          texto: inputMensagem.value,
-          usuario: auth.currentUser.email,
-          criadoEm: serverTimestamp()
-        });
-        inputMensagem.value = "";
-      }
-    });
-
-    // 👀 Mostrar mensagens em tempo real (ordenadas por data)
-    const q = query(collection(db, "mensagens"), orderBy("criadoEm"));
-    onSnapshot(q, (snapshot) => {
+    // 🔑 Abrir conversa
+    function abrirConversa(nome) {
+      conversaAtiva = nome;
+      chatTitulo.textContent = nome;
       mensagensDiv.innerHTML = "";
-      snapshot.forEach((doc) => {
-        const msg = doc.data();
-        mensagensDiv.innerHTML += `<p><b>${msg.usuario}:</b> ${msg.texto}</p>`;
+
+      const q = query(
+        collection(db, "conversas", nome, "mensagens"),
+        orderBy("timestamp")
+      );
+
+      onSnapshot(q, (snapshot) => {
+        mensagensDiv.innerHTML = "";
+        snapshot.forEach((doc) => {
+          const msg = doc.data();
+          const div = document.createElement("div");
+          div.className = msg.email === usuario.email ? "msg minha" : "msg";
+          div.textContent = msg.email + ": " + msg.texto;
+          mensagensDiv.appendChild(div);
+        });
+        mensagensDiv.scrollTop = mensagensDiv.scrollHeight;
       });
+    }
+
+    // 📨 Enviar mensagem
+    btnEnviar.addEventListener("click", async () => {
+      if (msgInput.value.trim() === "" || !conversaAtiva) return;
+      await addDoc(collection(db, "conversas", conversaAtiva, "mensagens"), {
+        email: usuario.email,
+        texto: msgInput.value,
+        timestamp: new Date()
+      });
+      msgInput.value = "";
     });
   </script>
 </body>
