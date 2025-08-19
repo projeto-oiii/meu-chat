@@ -2,39 +2,53 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Chat - Meu Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Chat</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="chat-container">
-    <!-- Sidebar -->
+    <!-- Lista de conversas -->
     <div class="sidebar">
-      <div class="sidebar-header">
-        <span id="userNome"></span>
+      <div class="user-header">
+        <span id="currentUserName"></span>
         <button id="logoutBtn">Sair</button>
       </div>
-
-      <div class="novo-chat">
-        <input type="text" id="novoChatInput" placeholder="Usuário ou Telefone">
-        <button id="addChatBtn">Adicionar</button>
-      </div>
-
-      <ul id="chatList"></ul>
+      <div class="chat-list" id="chatList"></div>
     </div>
 
     <!-- Área do chat -->
-    <div class="chat-box">
-      <div class="chat-header">
-        <h3 id="chatAtivoNome">Selecione um chat</h3>
-        <button id="saveContactBtn" class="header-action" disabled>Salvar contato</button>
+    <div class="chat-main">
+      <div class="chat-header" id="chatHeader">
+        <img id="chatPhoto" class="chat-photo" src="default-group.png" alt="Foto">
+        <div>
+          <h3 id="chatName">Selecione um chat</h3>
+          <small id="chatDescription"></small>
+        </div>
       </div>
 
-      <div id="messagesContainer" class="messages"></div>
+      <div class="chat-messages" id="chatMessages"></div>
 
-      <form id="chatForm" class="chat-input">
-        <input type="text" id="mensagemInput" placeholder="Digite sua mensagem">
-        <button type="submit">Enviar</button>
-      </form>
+      <div class="chat-input">
+        <input type="text" id="messageInput" placeholder="Digite sua mensagem">
+        <button id="sendBtn">Enviar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- POPUP de informações do grupo -->
+  <div id="groupInfoPopup" class="popup-overlay">
+    <div class="popup-content">
+      <span id="closePopup" class="close-btn">&times;</span>
+      <div class="group-info">
+        <img id="groupPhoto" class="group-photo" src="default-group.png" alt="Foto do grupo">
+        <h2 id="groupName">Nome do Grupo</h2>
+        <p id="groupDescription">Descrição do grupo</p>
+        <p><strong>Criado em:</strong> <span id="groupCreatedAt"></span></p>
+        <p><strong>Administrador:</strong> <span id="groupAdmin"></span></p>
+        <h3>Participantes</h3>
+        <ul id="groupMembers"></ul>
+      </div>
     </div>
   </div>
 
