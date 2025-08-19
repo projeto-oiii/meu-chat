@@ -2,7 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {
   getFirestore, collection, addDoc, query, where,
-  getDocs, onSnapshot, doc, setDoc
+  getDocs, onSnapshot, doc, setDoc, orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 // ===== Configuração Firebase =====
@@ -57,7 +57,7 @@ if (loginForm) {
 
     let userData = null;
 
-    // 1) tenta buscar por usuário (campo)
+    // 1) tenta buscar por usuário
     let q = query(collection(db, "users"), where("usuario", "==", loginInput));
     let resultado = await getDocs(q);
 
@@ -67,14 +67,7 @@ if (loginForm) {
       resultado = await getDocs(q);
     }
 
-    // 3) se ainda não encontrar, tenta buscar pelo ID do documento
-    if (resultado.empty) {
-      const docRef = doc(db, "users", loginInput);
-      const docSnap = await getDocs(query(collection(db, "users"), where("__name__", "==", loginInput)));
-      if (!docSnap.empty) {
-        userData = docSnap.docs[0].data();
-      }
-    } else {
+    if (!resultado.empty) {
       userData = resultado.docs[0].data();
     }
 
@@ -147,20 +140,26 @@ if (chatList && usuario) {
 function carregarMensagens() {
   if (!chatAtivo) return;
   const messagesContainer = document.getElementById("messagesContainer");
-  const q = query(collection(db, "chats", chatAtivo, "mensagens"));
+  const q = query(collection(db, "chats", chatAtivo, "mensagens"), orderBy("timestamp", "asc"));
+
   onSnapshot(q, (snapshot) => {
     messagesContainer.innerHTML = "";
     snapshot.docs.forEach((docSnap) => {
       const msg = docSnap.data();
       const div = document.createElement("div");
+      div.classList.add("message");
+
       if (msg.usuario === usuario.usuario) {
         div.classList.add("bg-me");
       } else {
         div.classList.add("bg-other");
       }
-      div.innerText = `${msg.usuario}: ${msg.texto}`;
+
+      div.innerText = msg.texto;
       messagesContainer.appendChild(div);
     });
+
+    // sempre rolar para a última mensagem
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
   });
 }

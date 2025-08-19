@@ -126,23 +126,28 @@ body {
   padding: 10px;
   overflow-y: auto;
   background: #ece5dd;
+  display: flex;
+  flex-direction: column;
 }
 
-.messages div {
+.message {
   margin: 5px 0;
   padding: 8px 12px;
   border-radius: 10px;
   max-width: 60%;
+  word-wrap: break-word;
 }
 
 .bg-me {
   background: #dcf8c6;
-  margin-left: auto;
+  align-self: flex-end;  /* direita */
+  text-align: right;
 }
 
 .bg-other {
-  background: white;
-  margin-right: auto;
+  background: #fff;
+  align-self: flex-start; /* esquerda */
+  text-align: left;
 }
 
 .chat-input {
