@@ -191,9 +191,15 @@ function startChatsWatch() {
 }
 
 async function renderListaChatsFromSnap(snap) {
+  // garante unicidade: só um item por chatId
+  const unique = new Map();
+  snap.docs.forEach(docSnap => {
+    unique.set(docSnap.id, docSnap);
+  });
+
   chatList.innerHTML = ""; // limpa a lista antes de desenhar
 
-  for (const docSnap of snap.docs) {
+  for (const [chatId, docSnap] of unique.entries()) {
     const dados = docSnap.data();
     const amigo = (dados.membros || []).find(m => m !== usuario.usuario) || "Chat";
     const nomeExibicao = apelidos[amigo] || amigo;
@@ -202,7 +208,7 @@ async function renderListaChatsFromSnap(snap) {
     let snippet = "";
     try {
       const lastQ = query(
-        collection(db, "chats", docSnap.id, "mensagens"),
+        collection(db, "chats", chatId, "mensagens"),
         orderBy("timestamp", "desc"),
         limit(1)
       );
@@ -211,7 +217,7 @@ async function renderListaChatsFromSnap(snap) {
     } catch (_) {}
 
     const li = document.createElement("li");
-    li.dataset.chatId = docSnap.id;
+    li.dataset.chatId = chatId;
     li.dataset.amigo = amigo;
     li.innerHTML = `
       <div><strong>${nomeExibicao}</strong></div>
