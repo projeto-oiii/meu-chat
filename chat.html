@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Chat - Meu Chat</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="chat-container">
@@ -15,7 +15,7 @@
       </div>
 
       <div class="novo-chat">
-        <input type="text" id="novoChatInput" placeholder="Usuário ou Telefone">
+        <input type="text" id="novoChatInput" placeholder="Usuário ou Telefone" />
         <button id="addChatBtn">Adicionar</button>
       </div>
 
@@ -27,7 +27,7 @@
       <div class="chat-header">
         <h3 id="chatAtivoNome">Selecione um chat</h3>
         <div class="header-right">
-          <span id="presenceBadge" class="presence offline">off</span>
+          <span id="presenceBadge" class="presence offline">OFF</span>
           <button id="saveContactBtn" class="header-action" disabled>Salvar contato</button>
         </div>
       </div>
@@ -36,14 +36,14 @@
       <div id="typingIndicator" class="typing" aria-live="polite"></div>
 
       <form id="chatForm" class="chat-input">
-        <input type="text" id="mensagemInput" placeholder="Digite sua mensagem">
+        <input type="text" id="mensagemInput" placeholder="Digite sua mensagem" />
         <button type="submit">Enviar</button>
       </form>
     </div>
   </div>
 
   <!-- 🔊 Áudio de notificação -->
-  <audio id="notifySound" src="notify.mp3" preload="auto"></audio>
+  <audio id="notifySound" src="notify.wav" preload="auto"></audio>
 
   <script type="module" src="app.js"></script>
 </body>
