@@ -53,7 +53,6 @@ function watchApelidos(ownerUser) {
       const header = document.getElementById("chatAtivoNome");
       if (header) header.innerText = apelidos[contatoAtivo] || contatoAtivo;
     }
-    // re-renderiza lista com novos apelidos
     if (lastChatsSnap) renderListaChatsFromSnap(lastChatsSnap);
   });
 }
@@ -96,11 +95,9 @@ if (loginForm) {
 
     let userDoc = null;
 
-    // 1) procurar por usuário
     let r1 = await getDocs(query(collection(db, "users"), where("usuario", "==", loginInput)));
     if (!r1.empty) userDoc = r1.docs[0];
 
-    // 2) se não achar, procurar por telefone
     if (!userDoc) {
       let r2 = await getDocs(query(collection(db, "users"), where("telefone", "==", loginInput)));
       if (!r2.empty) userDoc = r2.docs[0];
@@ -135,7 +132,6 @@ if (userNome && usuario) {
   watchApelidos(usuario.usuario);
 }
 
-// Sair
 const logoutBtn = document.getElementById("logoutBtn");
 if (logoutBtn) {
   logoutBtn.addEventListener("click", () => {
@@ -152,7 +148,6 @@ if (addChatBtn) {
     if (!entrada) return;
     if (!usuario) return alert("Faça login novamente.");
 
-    // resolve nickname real do amigo
     let amigoNickname = null;
     let r = await getDocs(query(collection(db, "users"), where("usuario", "==", entrada)));
     if (!r.empty) amigoNickname = r.docs[0].data().usuario;
@@ -161,21 +156,21 @@ if (addChatBtn) {
       if (!r.empty) amigoNickname = r.docs[0].data().usuario;
     }
 
-    if (!amigoNickname) return alert("Usuário não encontrado pelo apelido/telefone.");
+    if (!amigoNickname) return alert("Usuário não encontrado.");
     if (amigoNickname === usuario.usuario) return alert("Você não pode iniciar chat consigo mesmo.");
 
     const id = chatIdFor(usuario.usuario, amigoNickname);
     await setDoc(doc(db, "chats", id), {
       membros: [usuario.usuario, amigoNickname],
       criadoEm: serverTimestamp(),
-      lastRead: {}, // { usuario: Timestamp }
+      lastRead: {},
     }, { merge: true });
 
     document.getElementById("novoChatInput").value = "";
   });
 }
 
-// ===== Lista de conversas (corrigida) =====
+// ===== Lista de conversas (sem duplicação) =====
 const chatList = document.getElementById("chatList");
 let unsubscribeChats = null;
 let lastChatsSnap = null;
@@ -191,20 +186,18 @@ function startChatsWatch() {
 }
 
 async function renderListaChatsFromSnap(snap) {
-  // garante unicidade: só um item por chatId
   const unique = new Map();
   snap.docs.forEach(docSnap => {
     unique.set(docSnap.id, docSnap);
   });
 
-  chatList.innerHTML = ""; // limpa a lista antes de desenhar
+  chatList.innerHTML = "";
 
   for (const [chatId, docSnap] of unique.entries()) {
     const dados = docSnap.data();
     const amigo = (dados.membros || []).find(m => m !== usuario.usuario) || "Chat";
     const nomeExibicao = apelidos[amigo] || amigo;
 
-    // preview da última mensagem
     let snippet = "";
     try {
       const lastQ = query(
@@ -227,7 +220,6 @@ async function renderListaChatsFromSnap(snap) {
   }
 }
 
-// Delegação de eventos: só um listener para toda lista
 if (chatList) {
   chatList.onclick = (e) => {
     const li = e.target.closest("li[data-chat-id]");
@@ -284,15 +276,10 @@ function carregarMensagens() {
   const messagesContainer = document.getElementById("messagesContainer");
   messagesContainer.innerHTML = "";
 
-  const chatDocRef = doc(db, "chats", chatAtivo);
-  onSnapshot(chatDocRef, (d) => {
-    const data = d.data() || {};
-    const outro = (data.membros || []).find(m => m !== usuario.usuario);
-    otherLastRead = (data.lastRead || {})[outro] || null;
-  });
+  if (unsubscribeMsgs) unsubscribeMsgs();
+  otherLastRead = null;
 
   const q = query(collection(db, "chats", chatAtivo, "mensagens"), orderBy("timestamp", "asc"));
-  if (unsubscribeMsgs) unsubscribeMsgs();
   unsubscribeMsgs = onSnapshot(q, (snapshot) => {
     messagesContainer.innerHTML = "";
     snapshot.docs.forEach((docSnap) => {
