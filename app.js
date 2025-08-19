@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, doc, updateDoc, getDocs, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, setDoc, getDocs, query, where, doc, updateDoc, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDFvYgca0_HRX0m_RSER0RgQ3LZDa6kaJ8",
@@ -20,7 +20,60 @@ if (document.getElementById("currentUser")) {
   document.getElementById("currentUser").innerText = currentUser;
 }
 
-// Logout
+// =============== CADASTRO ===============
+if (document.getElementById("cadastroBtn")) {
+  document.getElementById("cadastroBtn").addEventListener("click", async () => {
+    const nome = document.getElementById("nome").value.trim();
+    const nickname = document.getElementById("nickname").value.trim();
+    const telefone = document.getElementById("telefone").value.trim();
+    const senha = document.getElementById("senha").value.trim();
+
+    if (!nome || !nickname || !telefone || !senha) {
+      alert("Preencha todos os campos!");
+      return;
+    }
+
+    const usersRef = collection(db, "users");
+
+    await setDoc(doc(usersRef, nickname), {
+      nome,
+      nickname,
+      telefone,
+      senha
+    });
+
+    alert("Cadastro realizado! Faça login.");
+    window.location.href = "index.html";
+  });
+}
+
+// =============== LOGIN ===============
+if (document.getElementById("loginBtn")) {
+  document.getElementById("loginBtn").addEventListener("click", async () => {
+    const user = document.getElementById("loginUser").value.trim();
+    const pass = document.getElementById("loginPass").value.trim();
+
+    const usersRef = collection(db, "users");
+    const q = query(usersRef, where("senha", "==", pass));
+    const querySnap = await getDocs(q);
+
+    let found = false;
+    querySnap.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (data.nickname === user || data.telefone === user) {
+        localStorage.setItem("user", data.nickname);
+        found = true;
+        window.location.href = "chat.html";
+      }
+    });
+
+    if (!found) {
+      alert("Usuário ou senha inválidos.");
+    }
+  });
+}
+
+// =============== LOGOUT ===============
 if (document.getElementById("logoutBtn")) {
   document.getElementById("logoutBtn").addEventListener("click", () => {
     localStorage.removeItem("user");
@@ -28,7 +81,7 @@ if (document.getElementById("logoutBtn")) {
   });
 }
 
-// Enviar mensagem
+// =============== CHAT ===============
 if (document.getElementById("sendBtn")) {
   document.getElementById("sendBtn").addEventListener("click", async () => {
     const input = document.getElementById("messageInput");
@@ -44,12 +97,11 @@ if (document.getElementById("sendBtn")) {
     };
 
     const docRef = await addDoc(msgRef, newMsg);
-    await updateDoc(docRef, { status: "sent" }); // enviado
+    await updateDoc(docRef, { status: "sent" });
     input.value = "";
   });
 }
 
-// Carregar mensagens
 function loadMessages(chatId) {
   const messagesDiv = document.getElementById("messages");
   messagesDiv.innerHTML = "";
@@ -64,7 +116,7 @@ function loadMessages(chatId) {
       const msgDate = new Date(msg.timestamp.seconds * 1000);
       const dateString = msgDate.toLocaleDateString();
 
-      // Separador de data
+      // separador de data
       if (dateString !== lastDate) {
         const dateSep = document.createElement("div");
         dateSep.classList.add("date-separator");
@@ -85,7 +137,7 @@ function loadMessages(chatId) {
         lastDate = dateString;
       }
 
-      // Atualizar status (entregue/lido)
+      // atualizar status
       if (msg.sender !== currentUser) {
         if (msg.status === "sent") {
           await updateDoc(docSnap.ref, { status: "delivered" });
@@ -95,7 +147,6 @@ function loadMessages(chatId) {
         }
       }
 
-      // Renderizar mensagem
       const div = document.createElement("div");
       div.classList.add("message");
       div.classList.add(msg.sender === currentUser ? "sent" : "received");
@@ -117,7 +168,6 @@ function loadMessages(chatId) {
   });
 }
 
-// Carregar contatos
 async function loadContacts() {
   const contactsList = document.getElementById("contactsList");
   if (!contactsList) return;
