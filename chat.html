@@ -1,29 +1,50 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Meu Chat</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Meu Chat — Conversas</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="chat-container">
+    <!-- Sidebar -->
     <aside class="sidebar">
-      <h3>Contatos</h3>
-      <ul id="contactsList"></ul>
-      <button id="addContactBtn">Adicionar Contato</button>
+      <div class="sidebar-header">
+        <div class="me-info">
+          <div class="avatar" aria-hidden="true">🙂</div>
+          <div>
+            <div class="me-name" id="userNome">—</div>
+            <div class="muted tiny">logado</div>
+          </div>
+        </div>
+        <button id="logoutBtn" class="btn">Sair</button>
+      </div>
+
+      <div class="novo-chat">
+        <input type="text" id="novoChatInput" placeholder="Usuário ou Telefone" />
+        <button id="addChatBtn" class="btn primary">Adicionar</button>
+      </div>
+
+      <ul id="chatList" class="chat-list"></ul>
     </aside>
 
-    <main class="chat-main">
+    <!-- Área do chat -->
+    <main class="chat-box">
       <header class="chat-header">
-        <span id="chatWith">Selecione um contato</span>
-        <button id="logoutBtn">Sair</button>
+        <h3 id="chatAtivoNome" class="chat-title">Selecione um chat</h3>
+        <div class="header-right">
+          <span id="presenceBadge" class="presence offline">off</span>
+          <button id="saveContactBtn" class="btn subtle" disabled>Salvar contato</button>
+        </div>
       </header>
 
-      <div id="messages" class="messages"></div>
+      <section id="messagesContainer" class="messages" aria-live="polite"></section>
+      <div id="typingIndicator" class="typing" aria-live="polite"></div>
 
-      <form id="messageForm" class="message-form">
-        <input type="text" id="messageInput" placeholder="Digite uma mensagem" autocomplete="off">
-        <button type="submit">Enviar</button>
+      <form id="chatForm" class="chat-input" autocomplete="off">
+        <input type="text" id="mensagemInput" placeholder="Digite sua mensagem" />
+        <button type="submit" class="btn primary">Enviar</button>
       </form>
     </main>
   </div>
