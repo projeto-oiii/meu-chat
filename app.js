@@ -1,8 +1,8 @@
-// Importando Firebase
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
-import { getFirestore, collection, addDoc, query, where, getDocs, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+// Import Firebase SDK
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, orderBy, onSnapshot, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// 🔹 Configuração do seu Firebase
+// Configuração Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyDFvYgca0_HRX0m_RSER0RgQ3LZDa6kaJ8",
   authDomain: "meu-chat-71046.firebaseapp.com",
@@ -12,105 +12,124 @@ const firebaseConfig = {
   appId: "1:268291748548:web:4001f2e4002d7f0eeb8f91"
 };
 
-// Inicializar Firebase
+// Inicializa Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// 🔹 Cadastro
-window.cadastrar = async function () {
-  const nome = document.getElementById("nome").value;
-  const usuario = document.getElementById("usuario").value;
-  const telefone = document.getElementById("telefone").value;
-  const senha = document.getElementById("senha").value;
+// Salvar login ativo no navegador
+function salvarSessao(usuario) {
+  localStorage.setItem("usuarioAtivo", JSON.stringify(usuario));
+}
+function pegarSessao() {
+  return JSON.parse(localStorage.getItem("usuarioAtivo"));
+}
+function limparSessao() {
+  localStorage.removeItem("usuarioAtivo");
+}
 
-  if (!nome || !usuario || !telefone || !senha) {
-    alert("Preencha todos os campos!");
-    return;
-  }
+// ===== Cadastro =====
+const cadastroForm = document.getElementById("cadastroForm");
+if (cadastroForm) {
+  cadastroForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const nome = document.getElementById("nome").value;
+    const usuario = document.getElementById("usuario").value;
+    const telefone = document.getElementById("telefone").value;
+    const senha = document.getElementById("senha").value;
 
-  try {
-    await addDoc(collection(db, "users"), {
-      nome,
-      usuario,
-      telefone,
-      senha
-    });
-    alert("Cadastro realizado com sucesso!");
-    window.location.href = "index.html";
-  } catch (e) {
-    alert("Erro ao cadastrar: " + e.message);
-  }
-};
-
-// 🔹 Login (usuário OU telefone + senha)
-window.login = async function () {
-  const loginField = document.getElementById("loginField").value;
-  const senha = document.getElementById("loginPassword").value;
-
-  if (!loginField || !senha) {
-    alert("Preencha todos os campos!");
-    return;
-  }
-
-  try {
-    // Buscar pelo usuário OU telefone
-    const qUsuario = query(collection(db, "users"), where("usuario", "==", loginField), where("senha", "==", senha));
-    const qTelefone = query(collection(db, "users"), where("telefone", "==", loginField), where("senha", "==", senha));
-
-    const usuarioSnap = await getDocs(qUsuario);
-    const telefoneSnap = await getDocs(qTelefone);
-
-    if (!usuarioSnap.empty || !telefoneSnap.empty) {
-      localStorage.setItem("usuarioLogado", loginField);
-      window.location.href = "chat.html";
-    } else {
-      alert("Usuário não encontrado.");
+    try {
+      await setDoc(doc(db, "users", usuario), {
+        nome, usuario, telefone, senha
+      });
+      alert("Cadastro realizado com sucesso!");
+      window.location.href = "index.html";
+    } catch (err) {
+      alert("Erro ao cadastrar: " + err.message);
     }
-  } catch (e) {
-    alert("Erro ao logar: " + e.message);
-  }
-};
-
-// 🔹 Enviar mensagem
-window.enviarMensagem = async function () {
-  const msgInput = document.getElementById("mensagemInput");
-  const usuario = localStorage.getItem("usuarioLogado");
-
-  if (!msgInput.value) return;
-
-  try {
-    await addDoc(collection(db, "mensagens"), {
-      usuario,
-      texto: msgInput.value,
-      timestamp: new Date()
-    });
-    msgInput.value = "";
-  } catch (e) {
-    alert("Erro ao enviar: " + e.message);
-  }
-};
-
-// 🔹 Listar mensagens em tempo real com estilo WhatsApp
-if (window.location.pathname.endsWith("chat.html")) {
-  const mensagensDiv = document.getElementById("mensagens");
-  const q = query(collection(db, "mensagens"), orderBy("timestamp"));
-
-  onSnapshot(q, (snapshot) => {
-    mensagensDiv.innerHTML = "";
-    const usuarioLogado = localStorage.getItem("usuarioLogado");
-
-    snapshot.forEach((doc) => {
-      const msg = doc.data();
-      const classe = msg.usuario === usuarioLogado ? "mensagem eu" : "mensagem outro";
-      mensagensDiv.innerHTML += `<div class="${classe}"><b>${msg.usuario}:</b> ${msg.texto}</div>`;
-    });
-
-    mensagensDiv.scrollTop = mensagensDiv.scrollHeight;
   });
 }
 
-// 🔹 Logout
-window.logout = function () {
-  localStorage.removeItem("usuarioLogado");
-  window.location.href = "index.html";
-};
+// ===== Login =====
+const loginForm = document.getElementById("loginForm");
+if (loginForm) {
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const loginUser = document.getElementById("loginUser").value;
+    const senha = document.getElementById("loginSenha").value;
+
+    try {
+      // busca por nickname ou telefone
+      const q1 = query(collection(db, "users"), where("usuario", "==", loginUser));
+      const q2 = query(collection(db, "users"), where("telefone", "==", loginUser));
+
+      let querySnapshot = await getDocs(q1);
+      if (querySnapshot.empty) {
+        querySnapshot = await getDocs(q2);
+      }
+
+      if (querySnapshot.empty) {
+        alert("Usuário não encontrado.");
+        return;
+      }
+
+      const userDoc = querySnapshot.docs[0].data();
+      if (userDoc.senha !== senha) {
+        alert("Senha incorreta.");
+        return;
+      }
+
+      salvarSessao(userDoc);
+      window.location.href = "chat.html";
+    } catch (err) {
+      alert("Erro no login: " + err.message);
+    }
+  });
+}
+
+// ===== Chat =====
+const chatForm = document.getElementById("chatForm");
+const chatMessages = document.getElementById("chatMessages");
+const logoutBtn = document.getElementById("logoutBtn");
+
+if (chatForm && chatMessages) {
+  const usuario = pegarSessao();
+  if (!usuario) {
+    window.location.href = "index.html";
+  } else {
+    document.getElementById("meNome").innerText = usuario.nome;
+    document.getElementById("meUser").innerText = "@" + usuario.usuario;
+
+    chatForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById("mensagemInput").value;
+      await addDoc(collection(db, "mensagens"), {
+        texto: msg,
+        usuario: usuario.usuario,
+        nome: usuario.nome,
+        timestamp: new Date()
+      });
+      chatForm.reset();
+    });
+
+    const q = query(collection(db, "mensagens"), orderBy("timestamp", "asc"));
+    onSnapshot(q, (snapshot) => {
+      chatMessages.innerHTML = "";
+      snapshot.forEach((doc) => {
+        const msg = doc.data();
+        const div = document.createElement("div");
+        div.classList.add("msg");
+        div.classList.add(msg.usuario === usuario.usuario ? "me" : "other");
+        div.innerHTML = `<div class="from">${msg.nome}</div>${msg.texto}`;
+        chatMessages.appendChild(div);
+      });
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    });
+  }
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      limparSessao();
+      window.location.href = "index.html";
+    });
+  }
+}

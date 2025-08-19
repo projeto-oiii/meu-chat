@@ -2,19 +2,30 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cadastro</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="login-page">
-  <div class="login-container">
-    <h2>Cadastro</h2>
-    <input type="text" id="nome" placeholder="Nome completo">
-    <input type="text" id="usuario" placeholder="Nome de usuário">
-    <input type="text" id="telefone" placeholder="Telefone (DDD+número)">
-    <input type="password" id="senha" placeholder="Senha">
-    <button onclick="cadastrar()">Cadastrar</button>
-    <p>Já tem conta? <a href="index.html">Faça login</a></p>
+<body class="auth-bg">
+  <div class="auth-card">
+    <h1>Cadastro</h1>
+    <form id="cadastroForm">
+      <label>Nome completo</label>
+      <input type="text" id="nome" required>
+
+      <label>Usuário</label>
+      <input type="text" id="usuario" required>
+
+      <label>Telefone (DDD+número)</label>
+      <input type="text" id="telefone" required>
+
+      <label>Senha</label>
+      <input type="password" id="senha" required>
+
+      <button type="submit" class="btn-primary">Cadastrar</button>
+    </form>
+    <div class="auth-alt">
+      <p>Já tem conta? <a href="index.html">Faça login</a></p>
+    </div>
   </div>
   <script type="module" src="app.js"></script>
 </body>

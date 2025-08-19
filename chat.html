@@ -2,34 +2,54 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="chat-page">
-  <div class="chat-wrapper">
-    <aside class="sidebar">
-      <header>
-        <h2>Conversas</h2>
-        <button onclick="logout()">Sair</button>
-      </header>
-      <ul id="conversasLista">
-        <li class="active">Chat Geral</li>
-      </ul>
-    </aside>
+<body>
+  <div class="app">
+    <div class="app-shell">
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <div class="me">
+            <div class="avatar">🙂</div>
+            <div>
+              <div class="me-name" id="meNome">Usuário</div>
+              <div class="me-username" id="meUser">@nickname</div>
+            </div>
+          </div>
+          <button class="btn-ghost" id="logoutBtn">⎋</button>
+        </div>
 
-    <main class="chat-main">
-      <header class="chat-header">
-        <h3 id="chatTitulo">Chat Geral</h3>
-      </header>
+        <div class="sidebar-search">
+          <input type="text" placeholder="Procurar conversa...">
+          <button>🔍</button>
+        </div>
 
-      <div id="mensagens" class="chat-mensagens"></div>
+        <div class="sidebar-list" id="conversas">
+          <div class="sidebar-item active">
+            <div>
+              <div class="item-title">Chat Geral</div>
+              <div class="item-sub">Mensagens abertas</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      <footer class="chat-footer">
-        <input type="text" id="mensagemInput" placeholder="Digite sua mensagem">
-        <button onclick="enviarMensagem()">Enviar</button>
-      </footer>
-    </main>
+      <div class="chat">
+        <div class="chat-header">
+          <div class="chat-peer">
+            <div class="peer-name">Chat Geral</div>
+          </div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages"></div>
+
+        <form class="chat-input" id="chatForm">
+          <input type="text" id="mensagemInput" placeholder="Digite sua mensagem" required>
+          <button type="submit">Enviar</button>
+        </form>
+      </div>
+    </div>
   </div>
   <script type="module" src="app.js"></script>
 </body>
