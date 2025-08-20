@@ -80,6 +80,11 @@ button {
   align-items: center;
 }
 #listaContatos li:hover { background: #efefef; }
+.contact-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* Chat principal */
 .chat-box {
@@ -144,11 +149,16 @@ button {
 
 /* Badge de não lidas */
 .badge {
-  display: inline-block;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: #e53935;
   color: #fff;
   font-size: 12px;
-  padding: 2px 6px;
-  border-radius: 12px;
-  margin-left: 6px;
+  line-height: 1;
+  margin-left: 8px;
 }

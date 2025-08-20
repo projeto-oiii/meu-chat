@@ -5,7 +5,7 @@ import {
   collection, query, where, onSnapshot, serverTimestamp, orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
-// <<< CONFIG REAL >>>
+// <<< CONFIG DO PROJETO >>>
 const firebaseConfig = {
   apiKey: "AIzaSyDFvYgca0_HRX0m_RSER0RgQ3LZDa6kaJ8",
   authDomain: "meu-chat-71046.firebaseapp.com",
@@ -21,8 +21,11 @@ const db = getFirestore(app);
 // ================= Variáveis globais =================
 let usuarioLogado = localStorage.getItem("usuario") || null;
 let chatAtivo = null;
+
 let unsubscribeMensagens = null;
 let unsubscribeChats = null;
+// listeners de contagem de não lidas por chat (para evitar duplicações)
+const unreadUnsubs = new Map();
 
 // ================= Helpers =================
 function go(pagina) { window.location.href = pagina; }
@@ -31,9 +34,7 @@ function agoraHHMM(date) {
     return date?.toDate
       ? date.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  } catch(_) {
-    return "";
-  }
+  } catch(_) { return ""; }
 }
 
 // ================= Cadastro =================
@@ -49,10 +50,8 @@ if (cadastroForm) {
     try {
       const userRef = doc(db, "users", usuario);
       const exists = await getDoc(userRef);
-      if (exists.exists()) {
-        alert("Usuário já existe.");
-        return;
-      }
+      if (exists.exists()) { alert("Usuário já existe."); return; }
+
       await setDoc(userRef, { senha, criadoEm: serverTimestamp() });
       alert("Cadastro realizado!");
       go("index.html");
@@ -126,10 +125,7 @@ if (addContatoBtn) {
     try {
       const contatoRef = doc(db, "users", contato);
       const contatoSnap = await getDoc(contatoRef);
-      if (!contatoSnap.exists()) {
-        alert("Contato não encontrado.");
-        return;
-      }
+      if (!contatoSnap.exists()) { alert("Contato não encontrado."); return; }
 
       const chatId = [usuarioLogado, contato].sort().join("_");
       const chatRef = doc(db, "chats", chatId);
@@ -150,44 +146,70 @@ if (addContatoBtn) {
   });
 }
 
+/** Lista os chats do usuário e cria um listener POR CHAT
+ *  para contar não lidas (apenas mensagens do OUTRO que você não leu).
+ *  Quando você entrar no chat, as mensagens são marcadas como lidas e o
+ *  badge zera automaticamente (porque o listener recebe a atualização).
+ */
 function iniciarListaDeChats() {
   if (!listaContatos) return;
-  if (unsubscribeChats) unsubscribeChats();
 
-  const q = query(collection(db, "chats"), where("membros", "array-contains", usuarioLogado));
-  unsubscribeChats = onSnapshot(q, async (snap) => {
+  // Encerra listeners antigos da lista e das contagens
+  if (unsubscribeChats) unsubscribeChats();
+  for (const u of unreadUnsubs.values()) { try { u(); } catch {} }
+  unreadUnsubs.clear();
+
+  const qChats = query(collection(db, "chats"), where("membros", "array-contains", usuarioLogado));
+  unsubscribeChats = onSnapshot(qChats, (snap) => {
     listaContatos.innerHTML = "";
 
-    for (const docSnap of snap.docs) {
+    snap.docs.forEach((docSnap) => {
       const chatData = docSnap.data();
+      const chatId = docSnap.id;
       const outro = (chatData.membros || []).find(m => m !== usuarioLogado);
-      if (!outro) continue;
+      if (!outro) return;
 
-      // Conta mensagens não lidas
-      let naoLidas = 0;
-      try {
-        const msgsRef = collection(db, "chats", docSnap.id, "mensagens");
-        const snapMsgs = await getDocs(msgsRef);
-        snapMsgs.forEach(m => {
-          const d = m.data();
-          if (!d.lidoPor || !d.lidoPor.includes(usuarioLogado)) {
-            naoLidas++;
-          }
-        });
-      } catch (err) {
-        console.warn("Erro ao contar mensagens:", err);
-      }
-
+      // Linha visual
       const li = document.createElement("li");
-      li.innerHTML = `${outro} ${naoLidas > 0 ? `<span class="badge">${naoLidas}</span>` : ""}`;
+      const name = document.createElement("span");
+      name.className = "contact-name";
+      name.textContent = outro;
+      const badge = document.createElement("span");
+      badge.className = "badge";
+      badge.hidden = true;
 
+      li.appendChild(name);
+      li.appendChild(badge);
+      listaContatos.appendChild(li);
+
+      // Ao clicar, abre o chat
       li.addEventListener("click", () => {
-        if (chatAtivo === docSnap.id) return;
-        abrirChat(docSnap.id, outro);
+        if (chatAtivo === chatId) return;
+        abrirChat(chatId, outro);
       });
 
-      listaContatos.appendChild(li);
-    }
+      // Listener de mensagens DO CHAT para contar NÃO LIDAS (reativo)
+      // Estratégia: ouvir todas as mensagens do chat e contar localmente
+      // apenas as que foram enviadas pelo OUTRO e que não te incluem em lidoPor.
+      const msgsRef = collection(db, "chats", chatId, "mensagens");
+      const unsub = onSnapshot(msgsRef, (msnap) => {
+        let count = 0;
+        msnap.forEach(d => {
+          const m = d.data();
+          if (m.de !== usuarioLogado) { // só conta o que veio do outro
+            if (!m.lidoPor || !m.lidoPor.includes(usuarioLogado)) count++;
+          }
+        });
+        if (count > 0) {
+          badge.textContent = String(count);
+          badge.hidden = false;
+        } else {
+          badge.hidden = true;
+        }
+      });
+
+      unreadUnsubs.set(chatId, unsub);
+    });
   });
 }
 
@@ -200,23 +222,32 @@ async function abrirChat(chatId, contatoNome) {
   if (unsubscribeMensagens) unsubscribeMensagens();
 
   const msgsRef = collection(db, "chats", chatId, "mensagens");
-  const q = query(msgsRef, orderBy("enviadoEm", "asc"));
+  const qMsgs = query(msgsRef, orderBy("enviadoEm", "asc"));
 
-  unsubscribeMensagens = onSnapshot(q, async (snap) => {
+  unsubscribeMensagens = onSnapshot(qMsgs, async (snap) => {
     mensagensDiv.innerHTML = "";
-    let batchUpdates = [];
+
+    // Marca como lidas todas as mensagens do outro que ainda não foram lidas
+    const updates = [];
     snap.forEach((msgDoc) => {
       const msg = msgDoc.data();
-      if (!msg.lidoPor || !msg.lidoPor.includes(usuarioLogado)) {
-        batchUpdates.push(updateDoc(msgDoc.ref, {
-          lidoPor: [...(msg.lidoPor || []), usuarioLogado]
-        }));
+
+      // Se foi enviada PELO OUTRO e você ainda não está em lidoPor -> marcar leitura
+      if (msg.de !== usuarioLogado) {
+        if (!msg.lidoPor || !msg.lidoPor.includes(usuarioLogado)) {
+          updates.push(updateDoc(msgDoc.ref, {
+            lidoPor: [...(msg.lidoPor || []), usuarioLogado]
+          }));
+        }
       }
+
       renderMensagem(msg);
     });
-    if (batchUpdates.length > 0) {
-      await Promise.all(batchUpdates);
+
+    if (updates.length) {
+      try { await Promise.all(updates); } catch (e) { console.warn("Erro ao marcar lidas:", e); }
     }
+
     mensagensDiv.scrollTop = mensagensDiv.scrollHeight;
   });
 }
@@ -234,7 +265,7 @@ if (formMensagem) {
         de: usuarioLogado,
         texto,
         enviadoEm: serverTimestamp(),
-        lidoPor: [usuarioLogado]
+        lidoPor: [usuarioLogado] // quem envia já "leu"
       });
       mensagemInput.value = "";
     } catch (err) {
