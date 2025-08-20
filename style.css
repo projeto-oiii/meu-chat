@@ -100,6 +100,8 @@ ul#listaContatos li:hover {
   padding: 10px;
   overflow-y: auto;
   background: var(--panel2);
+  display: flex;
+  flex-direction: column;
 }
 .message {
   max-width: 70%;

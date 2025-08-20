@@ -2,16 +2,17 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
 import {
   getFirestore, doc, setDoc, getDoc, addDoc,
-  collection, query, where, onSnapshot, serverTimestamp, updateDoc
+  collection, query, where, onSnapshot, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
+// === SUA CONFIG REAL DO FIREBASE ===
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
-  authDomain: "SEU_DOMINIO.firebaseapp.com",
-  projectId: "SEU_PROJETO",
-  storageBucket: "SEU_BUCKET.appspot.com",
-  messagingSenderId: "XXXXXXXX",
-  appId: "XXXXXXXX"
+  apiKey: "AIzaSyDFvYgca0_HRX0m_RSER0RgQ3LZDa6kaJ8",
+  authDomain: "meu-chat-71046.firebaseapp.com",
+  projectId: "meu-chat-71046",
+  storageBucket: "meu-chat-71046.firebasestorage.app",
+  messagingSenderId: "268291748548",
+  appId: "1:268291748548:web:4001f2e4002d7f0eeb8f91"
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -20,11 +21,6 @@ const db = getFirestore(app);
 let usuarioLogado = localStorage.getItem("usuario");
 let chatAtivo = null;
 let unsubscribeMensagens = null;
-
-// ===== Util =====
-function redirecionar(pagina) {
-  window.location.href = pagina;
-}
 
 // ===== Cadastro =====
 const cadastroForm = document.getElementById("cadastroForm");
@@ -42,7 +38,7 @@ if (cadastroForm) {
     }
     await setDoc(userRef, { senha, criadoEm: serverTimestamp() });
     alert("Cadastro realizado!");
-    redirecionar("index.html");
+    window.location.href = "index.html";
   });
 }
 
@@ -62,7 +58,7 @@ if (loginForm) {
       return;
     }
     localStorage.setItem("usuario", usuario);
-    redirecionar("chat.html");
+    window.location.href = "chat.html";
   });
 }
 
@@ -72,23 +68,21 @@ if (usuarioLogadoDiv && usuarioLogado) {
   usuarioLogadoDiv.textContent = `${usuarioLogado} (logado)`;
 }
 
-// Sair
 const logoutBtn = document.getElementById("logoutBtn");
 if (logoutBtn) {
   logoutBtn.addEventListener("click", () => {
     localStorage.removeItem("usuario");
-    redirecionar("index.html");
+    window.location.href = "index.html";
   });
 }
 
-// Adicionar contato
+// ===== Adicionar contato =====
 const addContatoBtn = document.getElementById("addContatoBtn");
 if (addContatoBtn) {
   addContatoBtn.addEventListener("click", async () => {
     const contato = document.getElementById("novoContato").value.trim();
     if (!contato) return;
 
-    // Verifica se usuário existe
     const contatoRef = doc(db, "users", contato);
     const snap = await getDoc(contatoRef);
     if (!snap.exists()) {
@@ -96,7 +90,6 @@ if (addContatoBtn) {
       return;
     }
 
-    // Cria chat único
     const chatId = [usuarioLogado, contato].sort().join("_");
     const chatRef = doc(db, "chats", chatId);
     const chatSnap = await getDoc(chatRef);
@@ -104,15 +97,15 @@ if (addContatoBtn) {
     if (!chatSnap.exists()) {
       await setDoc(chatRef, {
         membros: [usuarioLogado, contato],
-        criadoEm: serverTimestamp(),
-        lastRead: { [usuarioLogado]: null, [contato]: null }
+        criadoEm: serverTimestamp()
       });
     }
+
     document.getElementById("novoContato").value = "";
   });
 }
 
-// Lista de contatos
+// ===== Listar contatos =====
 const listaContatos = document.getElementById("listaContatos");
 if (listaContatos && usuarioLogado) {
   const q = query(collection(db, "chats"), where("membros", "array-contains", usuarioLogado));
@@ -130,59 +123,37 @@ if (listaContatos && usuarioLogado) {
   });
 }
 
-// Abrir chat
+// ===== Abrir chat =====
 async function abrirChat(chatId, contato) {
   chatAtivo = chatId;
   document.getElementById("chatCom").textContent = contato;
   const mensagensDiv = document.getElementById("mensagens");
   mensagensDiv.innerHTML = "";
 
-  // Se já tinha listener, remove
   if (unsubscribeMensagens) unsubscribeMensagens();
 
   const msgsRef = collection(db, "chats", chatId, "mensagens");
-  const q = query(msgsRef);
-
-  unsubscribeMensagens = onSnapshot(q, (snap) => {
+  unsubscribeMensagens = onSnapshot(msgsRef, (snap) => {
     mensagensDiv.innerHTML = "";
     snap.forEach((msgDoc) => {
       const msg = msgDoc.data();
-      exibirMensagem(msgDoc.id, msg);
+      const div = document.createElement("div");
+      div.classList.add("message");
+      div.classList.add(msg.de === usuarioLogado ? "me" : "other");
+
+      div.innerHTML = `
+        <div>${msg.texto}</div>
+        <div class="timestamp">
+          ${msg.enviadoEm?.toDate().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}
+        </div>
+      `;
+      mensagensDiv.appendChild(div);
     });
     mensagensDiv.scrollTop = mensagensDiv.scrollHeight;
   });
 }
 
-// Exibir mensagem
-function exibirMensagem(id, msg) {
-  const mensagensDiv = document.getElementById("mensagens");
-  const div = document.createElement("div");
-  div.classList.add("message");
-  div.classList.add(msg.de === usuarioLogado ? "me" : "other");
-
-  div.innerHTML = `
-    <div>${msg.texto}</div>
-    <div class="timestamp">
-      ${msg.enviadoEm?.toDate().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}
-      ${msg.de === usuarioLogado ? renderStatus(msg) : ""}
-    </div>
-  `;
-  mensagensDiv.appendChild(div);
-
-  // Tocar som se for recebida
-  if (msg.de !== usuarioLogado) {
-    document.getElementById("notifySound").play();
-  }
-}
-
-// Renderiza status
-function renderStatus(msg) {
-  if (msg.lidoPor?.length > 1) return "✓✓ azul";
-  if (msg.recebidoPor?.length > 1) return "✓✓";
-  return "✓";
-}
-
-// Enviar mensagem
+// ===== Enviar mensagem =====
 const formMensagem = document.getElementById("formMensagem");
 if (formMensagem) {
   formMensagem.addEventListener("submit", async (e) => {
@@ -195,9 +166,7 @@ if (formMensagem) {
     await addDoc(collection(db, "chats", chatAtivo, "mensagens"), {
       de: usuarioLogado,
       texto,
-      enviadoEm: serverTimestamp(),
-      recebidoPor: [usuarioLogado],
-      lidoPor: []
+      enviadoEm: serverTimestamp()
     });
 
     document.getElementById("mensagemInput").value = "";
