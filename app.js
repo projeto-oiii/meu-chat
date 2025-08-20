@@ -1,324 +1,205 @@
-// ===== Firebase (ES Modules 10.x) =====
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+// ===== Firebase Config =====
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
 import {
-  getFirestore, collection, addDoc, query, where, getDocs, onSnapshot,
-  doc, setDoc, orderBy, serverTimestamp, updateDoc, getDoc
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+  getFirestore, doc, setDoc, getDoc, addDoc,
+  collection, query, where, onSnapshot, serverTimestamp, updateDoc
+} from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
-// ===== Configuração do seu projeto Firebase =====
 const firebaseConfig = {
-  apiKey: "AIzaSyDFvYgca0_HRX0m_RSER0RgQ3LZDa6kaJ8",
-  authDomain: "meu-chat-71046.firebaseapp.com",
-  projectId: "meu-chat-71046",
-  storageBucket: "meu-chat-71046.firebasestorage.app",
-  messagingSenderId: "268291748548",
-  appId: "1:268291748548:web:4001f2e4002d7f0eeb8f91"
+  apiKey: "SUA_API_KEY",
+  authDomain: "SEU_DOMINIO.firebaseapp.com",
+  projectId: "SEU_PROJETO",
+  storageBucket: "SEU_BUCKET.appspot.com",
+  messagingSenderId: "XXXXXXXX",
+  appId: "XXXXXXXX"
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// ===== Helpers =====
-const $ = (id) => document.getElementById(id);
+// ===== Variáveis globais =====
+let usuarioLogado = localStorage.getItem("usuario");
+let chatAtivo = null;
+let unsubscribeMensagens = null;
 
-async function sha256(text) {
-  const enc = new TextEncoder();
-  const buf = await crypto.subtle.digest("SHA-256", enc.encode(text));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
-}
-function chatIdFor(a, b) { return [a, b].sort().join("_"); }
-
-function renderStatus(status) {
-  if (!status) return "";
-  if (status === "enviado")  return "✔";
-  if (status === "recebido") return "✔✔";
-  if (status === "lido")     return `<span style="color:#4fc3f7">✔✔</span>`;
-  return "";
+// ===== Util =====
+function redirecionar(pagina) {
+  window.location.href = pagina;
 }
 
-// Som
-const notifyEl = typeof window !== "undefined" ? $("notifySound") : null;
-function playNotify() {
-  if (!notifyEl) return;
-  try {
-    notifyEl.currentTime = 0;
-    const p = notifyEl.play();
-    if (p && p.catch) p.catch(()=>{});
-  } catch {}
-}
-
-// ===== Estado =====
-let usuario = JSON.parse(localStorage.getItem("usuario")) || null; // {usuario, telefone, nome, senhaHash?}
-let chatAtual = null;
-let contatoAtual = null;
-let unsubMensagens = null;
-let unsubChats = null;
-
-// ===== LOGIN =====
-if ($("loginForm")) {
-  $("loginForm").addEventListener("submit", async (e) => {
+// ===== Cadastro =====
+const cadastroForm = document.getElementById("cadastroForm");
+if (cadastroForm) {
+  cadastroForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const entrada = $("loginInput").value.trim(); // usuário OU telefone
-    const senha = $("loginSenha").value;
+    const usuario = document.getElementById("cadastroUsuario").value.trim();
+    const senha = document.getElementById("cadastroSenha").value;
 
-    try {
-      // Tenta por usuário
-      let snap = await getDocs(query(collection(db, "users"), where("usuario", "==", entrada)));
-      let userDoc = !snap.empty ? snap.docs[0] : null;
-
-      // Se não achou, tenta por telefone
-      if (!userDoc) {
-        snap = await getDocs(query(collection(db, "users"), where("telefone", "==", entrada)));
-        userDoc = !snap.empty ? snap.docs[0] : null;
-      }
-
-      if (!userDoc) return alert("Usuário não encontrado.");
-
-      const dados = userDoc.data();
-      const senhaHash = await sha256(senha);
-
-      const ok =
-        (dados.senhaHash && dados.senhaHash === senhaHash) ||
-        (dados.senha && dados.senha === senha); // compatibilidade
-
-      if (!ok) return alert("Senha incorreta.");
-
-      usuario = dados;
-      localStorage.setItem("usuario", JSON.stringify(usuario));
-      window.location.href = "chat.html";
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao fazer login. Veja o console.");
+    const userRef = doc(db, "users", usuario);
+    const snap = await getDoc(userRef);
+    if (snap.exists()) {
+      alert("Usuário já existe!");
+      return;
     }
+    await setDoc(userRef, { senha, criadoEm: serverTimestamp() });
+    alert("Cadastro realizado!");
+    redirecionar("index.html");
   });
 }
 
-// ===== CADASTRO =====
-if ($("cadastroForm")) {
-  $("cadastroForm").addEventListener("submit", async (e) => {
+// ===== Login =====
+const loginForm = document.getElementById("loginForm");
+if (loginForm) {
+  loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const nome = ($("cadastroNome")?.value || "").trim();
-    const usuarioCadastro = $("cadastroUsuario").value.trim();
-    const telefone = ($("cadastroTelefone")?.value || "").trim();
-    const senha = $("cadastroSenha").value;
+    const usuario = document.getElementById("loginUsuario").value.trim();
+    const senha = document.getElementById("loginSenha").value;
 
-    if (!usuarioCadastro || !senha) return alert("Preencha usuário e senha.");
+    const userRef = doc(db, "users", usuario);
+    const snap = await getDoc(userRef);
 
-    try {
-      const ja = await getDocs(query(collection(db, "users"), where("usuario", "==", usuarioCadastro)));
-      if (!ja.empty) return alert("Usuário já existe.");
-
-      const senhaHash = await sha256(senha);
-      await setDoc(doc(db, "users", usuarioCadastro), {
-        usuario: usuarioCadastro,
-        nome: nome || usuarioCadastro,
-        telefone: telefone || "",
-        senhaHash,
-        senha, // compatibilidade (pode remover depois)
-        criadoEm: serverTimestamp()
-      });
-
-      alert("Cadastro realizado! Faça login.");
-      window.location.href = "index.html";
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao cadastrar. Veja o console.");
+    if (!snap.exists() || snap.data().senha !== senha) {
+      alert("Usuário ou senha incorretos!");
+      return;
     }
+    localStorage.setItem("usuario", usuario);
+    redirecionar("chat.html");
   });
 }
 
-// ===== Proteção de rota do chat =====
-if (location.pathname.endsWith("chat.html")) {
-  if (!usuario) {
-    window.location.href = "index.html";
-  }
+// ===== Chat =====
+const usuarioLogadoDiv = document.getElementById("usuarioLogado");
+if (usuarioLogadoDiv && usuarioLogado) {
+  usuarioLogadoDiv.textContent = `${usuarioLogado} (logado)`;
 }
 
-// ===== Chat (UI básica) =====
-if ($("sairBtn")) {
-  $("usuarioLogado").innerText = usuario?.usuario || "";
-  $("sairBtn").addEventListener("click", () => {
+// Sair
+const logoutBtn = document.getElementById("logoutBtn");
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", () => {
     localStorage.removeItem("usuario");
-    window.location.href = "index.html";
+    redirecionar("index.html");
   });
 }
 
-// Criar/abrir chat
-if ($("addContato")) {
-  $("addContato").addEventListener("click", async () => {
-    const entrada = ($("novoContato").value || "").trim();
-    if (!entrada) return;
+// Adicionar contato
+const addContatoBtn = document.getElementById("addContatoBtn");
+if (addContatoBtn) {
+  addContatoBtn.addEventListener("click", async () => {
+    const contato = document.getElementById("novoContato").value.trim();
+    if (!contato) return;
 
-    try {
-      // encontra o alvo por usuario ou telefone
-      let snap = await getDocs(query(collection(db, "users"), where("usuario", "==", entrada)));
-      let alvo = !snap.empty ? snap.docs[0].data().usuario : null;
-      if (!alvo) {
-        snap = await getDocs(query(collection(db, "users"), where("telefone", "==", entrada)));
-        alvo = !snap.empty ? snap.docs[0].data().usuario : null;
-      }
-      if (!alvo) return alert("Contato não encontrado.");
-      if (alvo === usuario.usuario) return alert("Não é possível iniciar chat consigo mesmo.");
-
-      const id = chatIdFor(usuario.usuario, alvo);
-      await setDoc(doc(db, "chats", id), {
-        membros: [usuario.usuario, alvo],
-        criadoEm: serverTimestamp()
-      }, { merge: true });
-
-      // não abre automaticamente — você clica na lista
-      $("novoContato").value = "";
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao criar chat.");
-    }
-  });
-}
-
-// Lista de chats (sem duplicação)
-const listaContatos = $("listaContatos");
-function desenharItem(chatId, amigo) {
-  const li = document.createElement("li");
-  li.dataset.chatId = chatId;
-  li.dataset.amigo = amigo;
-  li.innerHTML = `
-    <div class="chat-item">
-      <span class="chat-nome">${amigo}</span>
-      <span class="chat-preview" id="preview-${chatId}"></span>
-    </div>
-  `;
-  return li;
-}
-
-function startChatsWatch() {
-  if (!listaContatos || !usuario) return;
-  if (unsubChats) { unsubChats(); unsubChats = null; }
-
-  const qChats = query(collection(db, "chats"), where("membros", "array-contains", usuario.usuario));
-  unsubChats = onSnapshot(qChats, async (snap) => {
-    const frag = document.createDocumentFragment();
-
-    for (const chatDoc of snap.docs) {
-      const dados = chatDoc.data();
-      const chatId = chatDoc.id;
-      const amigo = (dados.membros || []).find(m => m !== usuario.usuario) || "Chat";
-
-      const li = desenharItem(chatId, amigo);
-      frag.appendChild(li);
-
-      // preview da última mensagem
-      onSnapshot(
-        query(collection(db, "chats", chatId, "mensagens"), orderBy("timestamp", "desc")),
-        (s2) => {
-          const prev = $("preview-" + chatId);
-          if (prev) {
-            if (!s2.empty) {
-              const m = s2.docs[0].data();
-              prev.textContent = (m.texto || "");
-            } else prev.textContent = "";
-          }
-        }
-      );
+    // Verifica se usuário existe
+    const contatoRef = doc(db, "users", contato);
+    const snap = await getDoc(contatoRef);
+    if (!snap.exists()) {
+      alert("Usuário não encontrado!");
+      return;
     }
 
-    listaContatos.replaceChildren(frag);
+    // Cria chat único
+    const chatId = [usuarioLogado, contato].sort().join("_");
+    const chatRef = doc(db, "chats", chatId);
+    const chatSnap = await getDoc(chatRef);
+
+    if (!chatSnap.exists()) {
+      await setDoc(chatRef, {
+        membros: [usuarioLogado, contato],
+        criadoEm: serverTimestamp(),
+        lastRead: { [usuarioLogado]: null, [contato]: null }
+      });
+    }
+    document.getElementById("novoContato").value = "";
   });
 }
 
-if (location.pathname.endsWith("chat.html")) startChatsWatch();
+// Lista de contatos
+const listaContatos = document.getElementById("listaContatos");
+if (listaContatos && usuarioLogado) {
+  const q = query(collection(db, "chats"), where("membros", "array-contains", usuarioLogado));
+  onSnapshot(q, (snap) => {
+    listaContatos.innerHTML = "";
+    snap.forEach((docSnap) => {
+      const chat = docSnap.data();
+      const outro = chat.membros.find((m) => m !== usuarioLogado);
 
-// Clique único para abrir chat
-if (listaContatos) {
-  listaContatos.addEventListener("click", (e) => {
-    const li = e.target.closest("li[data-chat-id]");
-    if (!li) return;
-    const { chatId, amigo } = li.dataset;
-    abrirChat(chatId, amigo);
+      const li = document.createElement("li");
+      li.textContent = outro;
+      li.onclick = () => abrirChat(docSnap.id, outro);
+      listaContatos.appendChild(li);
+    });
   });
 }
 
-// ===== Abrir e renderizar mensagens =====
-const messagesBox = $("messages");
-const nomeContato = $("nomeContato");
+// Abrir chat
+async function abrirChat(chatId, contato) {
+  chatAtivo = chatId;
+  document.getElementById("chatCom").textContent = contato;
+  const mensagensDiv = document.getElementById("mensagens");
+  mensagensDiv.innerHTML = "";
 
-function renderMsgBubble(msg) {
+  // Se já tinha listener, remove
+  if (unsubscribeMensagens) unsubscribeMensagens();
+
+  const msgsRef = collection(db, "chats", chatId, "mensagens");
+  const q = query(msgsRef);
+
+  unsubscribeMensagens = onSnapshot(q, (snap) => {
+    mensagensDiv.innerHTML = "";
+    snap.forEach((msgDoc) => {
+      const msg = msgDoc.data();
+      exibirMensagem(msgDoc.id, msg);
+    });
+    mensagensDiv.scrollTop = mensagensDiv.scrollHeight;
+  });
+}
+
+// Exibir mensagem
+function exibirMensagem(id, msg) {
+  const mensagensDiv = document.getElementById("mensagens");
   const div = document.createElement("div");
   div.classList.add("message");
-  div.classList.add(msg.usuario === usuario.usuario ? "bg-me" : "bg-other");
+  div.classList.add(msg.de === usuarioLogado ? "me" : "other");
 
-  const body = document.createElement("div");
-  body.classList.add("body");
-  body.textContent = msg.texto || "";
+  div.innerHTML = `
+    <div>${msg.texto}</div>
+    <div class="timestamp">
+      ${msg.enviadoEm?.toDate().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}
+      ${msg.de === usuarioLogado ? renderStatus(msg) : ""}
+    </div>
+  `;
+  mensagensDiv.appendChild(div);
 
-  const meta = document.createElement("div");
-  meta.classList.add("meta");
-
-  let timeStr = "";
-  if (msg.timestamp?.toDate) {
-    const t = msg.timestamp.toDate();
-    timeStr = t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  // Tocar som se for recebida
+  if (msg.de !== usuarioLogado) {
+    document.getElementById("notifySound").play();
   }
-
-  const ticks = msg.usuario === usuario.usuario ? renderStatus(msg.status) : "";
-  meta.innerHTML = `<span>${timeStr}</span> ${ticks}`;
-
-  div.appendChild(body);
-  div.appendChild(meta);
-  return div;
 }
 
-function abrirChat(idChat, amigo) {
-  chatAtual = idChat;
-  contatoAtual = amigo;
-  if (nomeContato) nomeContato.textContent = amigo;
-  if (!messagesBox) return;
-
-  messagesBox.innerHTML = "";
-  if (unsubMensagens) { unsubMensagens(); unsubMensagens = null; }
-
-  const q = query(collection(db, "chats", chatAtual, "mensagens"), orderBy("timestamp", "asc"));
-  unsubMensagens = onSnapshot(q, async (snapshot) => {
-    const frag = document.createDocumentFragment();
-
-    for (const d of snapshot.docs) {
-      const msg = d.data();
-      frag.appendChild(renderMsgBubble(msg));
-
-      // Se é mensagem do outro e ainda está "enviado", marca "recebido" e toca som
-      if (msg.usuario !== usuario.usuario && msg.status === "enviado") {
-        updateDoc(d.ref, { status: "recebido" }).catch(()=>{});
-        playNotify();
-      }
-    }
-
-    messagesBox.replaceChildren(frag);
-    messagesBox.scrollTop = messagesBox.scrollHeight;
-
-    // Marca como lido mensagens do outro que não estão lidas
-    for (const d of snapshot.docs) {
-      const msg = d.data();
-      if (msg.usuario !== usuario.usuario && msg.status !== "lido") {
-        updateDoc(d.ref, { status: "lido" }).catch(()=>{});
-      }
-    }
-  });
+// Renderiza status
+function renderStatus(msg) {
+  if (msg.lidoPor?.length > 1) return "✓✓ azul";
+  if (msg.recebidoPor?.length > 1) return "✓✓";
+  return "✓";
 }
 
-// ===== Enviar mensagem =====
-const chatForm = $("chatForm");
-if (chatForm) {
-  chatForm.addEventListener("submit", async (e) => {
+// Enviar mensagem
+const formMensagem = document.getElementById("formMensagem");
+if (formMensagem) {
+  formMensagem.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (!chatAtual) return alert("Selecione um chat primeiro.");
-    const input = $("mensagemInput");
-    const texto = (input.value || "").trim();
-    if (!texto) return;
-    input.value = "";
+    if (!chatAtivo) return;
 
-    await addDoc(collection(db, "chats", chatAtual, "mensagens"), {
-      usuario: usuario.usuario,
+    const texto = document.getElementById("mensagemInput").value.trim();
+    if (!texto) return;
+
+    await addDoc(collection(db, "chats", chatAtivo, "mensagens"), {
+      de: usuarioLogado,
       texto,
-      timestamp: serverTimestamp(),
-      status: "enviado"
+      enviadoEm: serverTimestamp(),
+      recebidoPor: [usuarioLogado],
+      lidoPor: []
     });
+
+    document.getElementById("mensagemInput").value = "";
   });
 }

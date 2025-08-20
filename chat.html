@@ -1,62 +1,43 @@
-/* === Tema básico === */
-:root{
-  --bg:#111b21; --panel:#202c33; --panel2:#0b141a; --border:#2a3942;
-  --text:#e9edef; --muted:#94a3b8; --primary:#2196f3;
-  --me:#056162; --other:#2a3942; --online:#22c55e; --offline:#9aa6b2;
-}
-*{box-sizing:border-box}
-body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat - Meu Chat</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="chat-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <header>
+        <div id="usuarioLogado"></div>
+        <button id="logoutBtn">Sair</button>
+      </header>
+      <div class="novo-chat">
+        <input type="text" id="novoContato" placeholder="Usuário ou Telefone" />
+        <button id="addContatoBtn">Adicionar</button>
+      </div>
+      <ul id="listaContatos"></ul>
+    </aside>
 
-/* Login/Cadastro */
-.login-container,.cadastro-container{
-  width:320px;margin:80px auto;background:var(--panel);padding:20px;border-radius:10px;
-  box-shadow:0 2px 10px rgba(0,0,0,.35)
-}
-.login-container h2,.cadastro-container h2{margin:0 0 10px;text-align:center}
-.login-container form,.cadastro-container form{display:flex;flex-direction:column;gap:10px}
-.login-container input,.cadastro-container input{
-  padding:10px;border:1px solid var(--border);border-radius:8px;background:#0f1f26;color:var(--text)
-}
-.login-container button,.cadastro-container button{
-  padding:10px;background:var(--primary);border:none;border-radius:8px;color:#fff;cursor:pointer
-}
-
-/* Layout Chat */
-.chat-container{display:flex;height:100vh}
-.sidebar{width:300px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column}
-.sidebar-header{display:flex;justify-content:space-between;align-items:center;padding:12px;background:#17212a}
-.novo-chat{display:flex;padding:10px;gap:8px}
-.novo-chat input{flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;background:#0f1f26;color:var(--text)}
-.novo-chat button{padding:10px 12px;background:var(--primary);color:#fff;border:none;border-radius:8px}
-.sidebar ul{list-style:none;margin:0;padding:0;overflow-y:auto;flex:1}
-.sidebar ul li{padding:12px 10px;border-bottom:1px dashed rgba(255,255,255,.06);cursor:pointer}
-.sidebar ul li:hover{background:rgba(255,255,255,.04)}
-.chat-item{display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;gap:4px 8px;align-items:center}
-.chat-nome{font-weight:700}
-.chat-preview{grid-column:1 / -1;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-/* Área chat */
-.chat-box{flex:1;display:flex;flex-direction:column}
-.chat-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#17212a;border-bottom:1px solid var(--border)}
-.chat-header h3{margin:0}
-.messages{flex:1;padding:16px;overflow-y:auto;background:var(--panel2);display:flex;flex-direction:column;gap:8px}
-
-/* Bolhas proporcionais */
-.message{
-  max-width:70%;padding:10px 12px;border-radius:12px;display:flex;flex-direction:column;gap:4px;line-height:1.4
-}
-.bg-me{background:var(--me);color:#fff;align-self:flex-end}
-.bg-other{background:var(--other);color:#fff;align-self:flex-start}
-.message .body{white-space:pre-wrap;word-wrap:break-word}
-.message .meta{font-size:11px;opacity:.8;text-align:right;display:flex;gap:6px;justify-content:flex-end}
-
-/* Input */
-.chat-input{display:flex;gap:8px;padding:12px;background:#17212a;border-top:1px solid var(--border)}
-.chat-input input{flex:1;padding:12px;border:1px solid var(--border);border-radius:10px;background:#0f1f26;color:#fff}
-.chat-input button{padding:10px 16px;background:var(--primary);border:none;border-radius:10px;color:#fff;cursor:pointer}
-
-/* Presence */
-.header-right{display:flex;align-items:center;gap:8px}
-.presence{font-size:12px;padding:4px 8px;border-radius:999px;background:var(--offline);color:#0b1420}
-.presence.online{background:var(--online)}
-.typing{min-height:18px;padding:0 12px 6px;font-size:12px;color:var(--muted)}
+    <!-- Chat principal -->
+    <main class="chat-box">
+      <header class="chat-header">
+        <h3 id="chatCom">Selecione um contato</h3>
+        <div class="header-right">
+          <span id="statusPresenca" class="presence offline">OFF</span>
+          <button id="salvarContatoBtn">Salvar contato</button>
+        </div>
+      </header>
+      <div id="mensagens" class="messages"></div>
+      <form id="formMensagem" class="chat-input">
+        <input type="text" id="mensagemInput" placeholder="Digite sua mensagem" />
+        <button type="submit">Enviar</button>
+      </form>
+    </main>
+  </div>
+  <audio id="notifySound" src="notify.mp3" preload="auto"></audio>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
