@@ -75,6 +75,9 @@ button {
   padding: 12px;
   border-bottom: 1px solid #eee;
   cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 #listaContatos li:hover { background: #efefef; }
 
@@ -137,4 +140,15 @@ button {
 .chat-input button {
   padding: 10px 14px;
   border-radius: 8px;
+}
+
+/* Badge de não lidas */
+.badge {
+  display: inline-block;
+  background: #e53935;
+  color: #fff;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 12px;
+  margin-left: 6px;
 }

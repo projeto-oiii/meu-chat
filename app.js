@@ -1,11 +1,11 @@
 // ================= Firebase (v10) =================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
 import {
-  getFirestore, doc, setDoc, getDoc, addDoc, updateDoc,
+  getFirestore, doc, setDoc, getDoc, getDocs, addDoc, updateDoc,
   collection, query, where, onSnapshot, serverTimestamp, orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
-// <<< CONFIG REAL QUE VOCÊ ME PASSOU >>>
+// <<< CONFIG REAL >>>
 const firebaseConfig = {
   apiKey: "AIzaSyDFvYgca0_HRX0m_RSER0RgQ3LZDa6kaJ8",
   authDomain: "meu-chat-71046.firebaseapp.com",
@@ -21,8 +21,8 @@ const db = getFirestore(app);
 // ================= Variáveis globais =================
 let usuarioLogado = localStorage.getItem("usuario") || null;
 let chatAtivo = null;
-let unsubscribeMensagens = null;   // para remover listener quando troca de chat
-let unsubscribeChats = null;       // listener da lista de chats (sidebar)
+let unsubscribeMensagens = null;
+let unsubscribeChats = null;
 
 // ================= Helpers =================
 function go(pagina) { window.location.href = pagina; }
@@ -89,7 +89,7 @@ if (loginForm) {
   });
 }
 
-// ================= Chat (somente quando estiver em chat.html) =================
+// ================= Chat =================
 const usuarioLogadoSpan = document.getElementById("usuarioLogado");
 const logoutBtn = document.getElementById("logoutBtn");
 const listaContatos = document.getElementById("listaContatos");
@@ -100,7 +100,6 @@ const chatCom = document.getElementById("chatCom");
 const formMensagem = document.getElementById("formMensagem");
 const mensagemInput = document.getElementById("mensagemInput");
 
-// Se a página é chat.html, exija login
 if (usuarioLogadoSpan || listaContatos || formMensagem) {
   if (!usuarioLogado) {
     go("index.html");
@@ -110,7 +109,6 @@ if (usuarioLogadoSpan || listaContatos || formMensagem) {
   }
 }
 
-// Sair
 if (logoutBtn) {
   logoutBtn.addEventListener("click", () => {
     localStorage.removeItem("usuario");
@@ -119,7 +117,6 @@ if (logoutBtn) {
   });
 }
 
-// Adicionar contato (cria/assegura chat entre usuário e contato)
 if (addContatoBtn) {
   addContatoBtn.addEventListener("click", async () => {
     const contato = (novoContatoInput.value || "").trim();
@@ -127,7 +124,6 @@ if (addContatoBtn) {
     if (contato === usuarioLogado) { alert("Não é possível criar chat com você mesmo."); return; }
 
     try {
-      // Verifica se contato existe
       const contatoRef = doc(db, "users", contato);
       const contatoSnap = await getDoc(contatoRef);
       if (!contatoSnap.exists()) {
@@ -147,7 +143,6 @@ if (addContatoBtn) {
       }
 
       novoContatoInput.value = "";
-      // não abre automaticamente; só abrirá quando o usuário clicar na lista (como você pediu)
     } catch (err) {
       console.error("Erro ao adicionar contato:", err);
       alert("Erro ao adicionar contato.");
@@ -155,64 +150,77 @@ if (addContatoBtn) {
   });
 }
 
-// Listagem de chats (sidebar) sem duplicações
 function iniciarListaDeChats() {
   if (!listaContatos) return;
-
-  // Garante um único listener da sidebar
   if (unsubscribeChats) unsubscribeChats();
 
   const q = query(collection(db, "chats"), where("membros", "array-contains", usuarioLogado));
-  unsubscribeChats = onSnapshot(q, (snap) => {
-    // Zera a lista a cada atualização para não duplicar
+  unsubscribeChats = onSnapshot(q, async (snap) => {
     listaContatos.innerHTML = "";
 
-    snap.forEach((docSnap) => {
+    for (const docSnap of snap.docs) {
       const chatData = docSnap.data();
       const outro = (chatData.membros || []).find(m => m !== usuarioLogado);
-      if (!outro) return;
+      if (!outro) continue;
+
+      // Conta mensagens não lidas
+      let naoLidas = 0;
+      try {
+        const msgsRef = collection(db, "chats", docSnap.id, "mensagens");
+        const snapMsgs = await getDocs(msgsRef);
+        snapMsgs.forEach(m => {
+          const d = m.data();
+          if (!d.lidoPor || !d.lidoPor.includes(usuarioLogado)) {
+            naoLidas++;
+          }
+        });
+      } catch (err) {
+        console.warn("Erro ao contar mensagens:", err);
+      }
 
       const li = document.createElement("li");
-      li.textContent = outro;
+      li.innerHTML = `${outro} ${naoLidas > 0 ? `<span class="badge">${naoLidas}</span>` : ""}`;
 
-      // Ao clicar: evita reabrir o mesmo chat (o que poderia reconfigurar listeners à toa)
       li.addEventListener("click", () => {
-        if (chatAtivo === docSnap.id) return;          // 🍀 evita reiniciar o mesmo chat ao clicar de novo
+        if (chatAtivo === docSnap.id) return;
         abrirChat(docSnap.id, outro);
       });
 
       listaContatos.appendChild(li);
-    });
+    }
   });
 }
 
-// Abrir um chat específico
 async function abrirChat(chatId, contatoNome) {
   chatAtivo = chatId;
   if (chatCom) chatCom.textContent = contatoNome;
   if (!mensagensDiv) return;
 
-  // Limpa mensagens da tela
   mensagensDiv.innerHTML = "";
-
-  // Remove listener antigo, se existir (evita mensagens duplicadas)
   if (unsubscribeMensagens) unsubscribeMensagens();
 
   const msgsRef = collection(db, "chats", chatId, "mensagens");
   const q = query(msgsRef, orderBy("enviadoEm", "asc"));
 
-  unsubscribeMensagens = onSnapshot(q, (snap) => {
-    // reconstrói a lista do zero pra evitar duplicação visual
+  unsubscribeMensagens = onSnapshot(q, async (snap) => {
     mensagensDiv.innerHTML = "";
+    let batchUpdates = [];
     snap.forEach((msgDoc) => {
       const msg = msgDoc.data();
+      if (!msg.lidoPor || !msg.lidoPor.includes(usuarioLogado)) {
+        batchUpdates.push(updateDoc(msgDoc.ref, {
+          lidoPor: [...(msg.lidoPor || []), usuarioLogado]
+        }));
+      }
       renderMensagem(msg);
     });
+    if (batchUpdates.length > 0) {
+      await Promise.all(batchUpdates);
+    }
     mensagensDiv.scrollTop = mensagensDiv.scrollHeight;
   });
 }
 
-// Enviar mensagem
 if (formMensagem) {
   formMensagem.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -225,7 +233,8 @@ if (formMensagem) {
       await addDoc(collection(db, "chats", chatAtivo, "mensagens"), {
         de: usuarioLogado,
         texto,
-        enviadoEm: serverTimestamp()
+        enviadoEm: serverTimestamp(),
+        lidoPor: [usuarioLogado]
       });
       mensagemInput.value = "";
     } catch (err) {
@@ -235,7 +244,6 @@ if (formMensagem) {
   });
 }
 
-// Renderiza uma mensagem na tela (bolha)
 function renderMensagem(msg) {
   const wrap = document.createElement("div");
   wrap.className = "message " + (msg.de === usuarioLogado ? "me" : "other");
