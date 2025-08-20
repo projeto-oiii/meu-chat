@@ -147,18 +147,12 @@ button {
   border-radius: 8px;
 }
 
-/* Badge de não lidas */
+/* Badge de não lidas — pontinho verde */
 .badge {
-  min-width: 18px;
-  height: 18px;
-  padding: 0 6px;
+  width: 12px;
+  height: 12px;
   border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: #e53935;
-  color: #fff;
-  font-size: 12px;
-  line-height: 1;
+  background: #2e7d32;    /* VERDE */
+  display: inline-block;
   margin-left: 8px;
 }

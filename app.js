@@ -1,7 +1,7 @@
 // ================= Firebase (v10) =================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
 import {
-  getFirestore, doc, setDoc, getDoc, getDocs, addDoc, updateDoc,
+  getFirestore, doc, setDoc, getDoc, addDoc, updateDoc,
   collection, query, where, onSnapshot, serverTimestamp, orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
@@ -24,8 +24,11 @@ let chatAtivo = null;
 
 let unsubscribeMensagens = null;
 let unsubscribeChats = null;
-// listeners de contagem de não lidas por chat (para evitar duplicações)
+
+// listeners de contagem de não lidas por chat
 const unreadUnsubs = new Map();
+// guarda o lastSeen (ms) de cada chat pro usuário logado
+const lastSeenMap = new Map();
 
 // ================= Helpers =================
 function go(pagina) { window.location.href = pagina; }
@@ -134,7 +137,8 @@ if (addContatoBtn) {
       if (!chatSnap.exists()) {
         await setDoc(chatRef, {
           membros: [usuarioLogado, contato],
-          criadoEm: serverTimestamp()
+          criadoEm: serverTimestamp(),
+          lastSeen: { [usuarioLogado]: serverTimestamp(), [contato]: serverTimestamp() }
         });
       }
 
@@ -147,9 +151,8 @@ if (addContatoBtn) {
 }
 
 /** Lista os chats do usuário e cria um listener POR CHAT
- *  para contar não lidas (apenas mensagens do OUTRO que você não leu).
- *  Quando você entrar no chat, as mensagens são marcadas como lidas e o
- *  badge zera automaticamente (porque o listener recebe a atualização).
+ *  para mostrar o pontinho verde APENAS quando houver mensagens do OUTRO
+ *  com enviadoEm > lastSeen[este usuário].
  */
 function iniciarListaDeChats() {
   if (!listaContatos) return;
@@ -158,58 +161,71 @@ function iniciarListaDeChats() {
   if (unsubscribeChats) unsubscribeChats();
   for (const u of unreadUnsubs.values()) { try { u(); } catch {} }
   unreadUnsubs.clear();
+  lastSeenMap.clear();
 
   const qChats = query(collection(db, "chats"), where("membros", "array-contains", usuarioLogado));
-  unsubscribeChats = onSnapshot(qChats, (snap) => {
+  unsubscribeChats = onSnapshot(qChats, async (snap) => {
     listaContatos.innerHTML = "";
 
-    snap.docs.forEach((docSnap) => {
+    // Renderiza cada chat do usuário
+    for (const docSnap of snap.docs) {
       const chatData = docSnap.data();
       const chatId = docSnap.id;
       const outro = (chatData.membros || []).find(m => m !== usuarioLogado);
-      if (!outro) return;
+      if (!outro) continue;
 
-      // Linha visual
+      // Garante que exista lastSeen para este usuário (para não "estourar" badge em chats antigos)
+      const lsObj = chatData.lastSeen || {};
+      if (!lsObj[usuarioLogado]) {
+        try {
+          await updateDoc(doc(db, "chats", chatId), { [`lastSeen.${usuarioLogado}`]: serverTimestamp() });
+        } catch (_) {}
+      }
+      const lastSeenMs =
+        lsObj[usuarioLogado]?.toMillis?.() ??
+        (chatData.lastSeen?.[usuarioLogado]?.toMillis?.() ?? 0);
+
+      lastSeenMap.set(chatId, lastSeenMs || 0);
+
+      // Linha visual do contato
       const li = document.createElement("li");
       const name = document.createElement("span");
       name.className = "contact-name";
       name.textContent = outro;
+
       const badge = document.createElement("span");
       badge.className = "badge";
-      badge.hidden = true;
+      badge.style.display = "none"; // só mostra se houver não lidas
 
       li.appendChild(name);
       li.appendChild(badge);
       listaContatos.appendChild(li);
 
-      // Ao clicar, abre o chat
+      // Abre o chat ao clicar
       li.addEventListener("click", () => {
         if (chatAtivo === chatId) return;
         abrirChat(chatId, outro);
       });
 
-      // Listener de mensagens DO CHAT para contar NÃO LIDAS (reativo)
-      // Estratégia: ouvir todas as mensagens do chat e contar localmente
-      // apenas as que foram enviadas pelo OUTRO e que não te incluem em lidoPor.
+      // Listener de mensagens do chat para calcular "não lidas"
       const msgsRef = collection(db, "chats", chatId, "mensagens");
       const unsub = onSnapshot(msgsRef, (msnap) => {
+        const ls = lastSeenMap.get(chatId) || 0;
         let count = 0;
+
         msnap.forEach(d => {
           const m = d.data();
-          if (m.de !== usuarioLogado) { // só conta o que veio do outro
-            if (!m.lidoPor || !m.lidoPor.includes(usuarioLogado)) count++;
-          }
+          if (m.de === usuarioLogado) return; // só conta do outro
+          const em = m.enviadoEm?.toMillis?.() || 0;
+          if (em > ls) count++;
         });
-        if (count > 0) {
-          badge.textContent = String(count);
-          badge.hidden = false;
-        } else {
-          badge.hidden = true;
-        }
+
+        // exibe pontinho verde apenas se houver não lidas
+        badge.style.display = count > 0 ? "inline-block" : "none";
       });
 
       unreadUnsubs.set(chatId, unsub);
-    });
+    }
   });
 }
 
@@ -221,18 +237,22 @@ async function abrirChat(chatId, contatoNome) {
   mensagensDiv.innerHTML = "";
   if (unsubscribeMensagens) unsubscribeMensagens();
 
+  // Atualiza lastSeen para zerar o badge imediatamente
+  try {
+    await updateDoc(doc(db, "chats", chatId), { [`lastSeen.${usuarioLogado}`]: serverTimestamp() });
+  } catch (_) {}
+
   const msgsRef = collection(db, "chats", chatId, "mensagens");
   const qMsgs = query(msgsRef, orderBy("enviadoEm", "asc"));
 
   unsubscribeMensagens = onSnapshot(qMsgs, async (snap) => {
     mensagensDiv.innerHTML = "";
 
-    // Marca como lidas todas as mensagens do outro que ainda não foram lidas
     const updates = [];
     snap.forEach((msgDoc) => {
       const msg = msgDoc.data();
 
-      // Se foi enviada PELO OUTRO e você ainda não está em lidoPor -> marcar leitura
+      // Para futura implementação de ✓✓ lido, mantemos lidoPor
       if (msg.de !== usuarioLogado) {
         if (!msg.lidoPor || !msg.lidoPor.includes(usuarioLogado)) {
           updates.push(updateDoc(msgDoc.ref, {
