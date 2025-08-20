@@ -1,40 +1,42 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Chat - Meu Chat</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 </head>
 <body>
   <div class="chat-container">
-    <!-- Sidebar -->
-    <div class="sidebar">
+    <!-- Lateral esquerda -->
+    <aside class="sidebar">
       <div class="sidebar-header">
         <span id="usuarioLogado"></span>
         <button id="logoutBtn">Sair</button>
       </div>
+
       <div class="novo-chat">
-        <input type="text" id="novoContato" placeholder="Usuário ou Telefone">
+        <input type="text" id="novoContato" placeholder="Usuário (ex: joao)" />
         <button id="addContatoBtn">Adicionar</button>
       </div>
-      <ul id="listaContatos"></ul>
-    </div>
 
-    <!-- Chat Box -->
-    <div class="chat-box">
-      <header>
+      <ul id="listaContatos"></ul>
+    </aside>
+
+    <!-- Área de mensagens -->
+    <main class="chat-box">
+      <header class="chat-top">
         <h3 id="chatCom">Selecione um contato</h3>
       </header>
+
       <div id="mensagens" class="messages"></div>
+
       <form id="formMensagem" class="chat-input">
-        <input type="text" id="mensagemInput" placeholder="Digite sua mensagem">
+        <input type="text" id="mensagemInput" placeholder="Digite sua mensagem" />
         <button type="submit">Enviar</button>
       </form>
-    </div>
+    </main>
   </div>
-
-  <!-- Som de notificação -->
-  <audio id="notifySound" src="notify.mp3" preload="auto"></audio>
 
   <script type="module" src="app.js"></script>
 </body>
