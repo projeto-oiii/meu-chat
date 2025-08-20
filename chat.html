@@ -2,42 +2,41 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat - Meu Chat</title>
-  <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="chat-container">
     <!-- Sidebar -->
-    <aside class="sidebar">
-      <header>
-        <div id="usuarioLogado"></div>
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <span id="usuarioLogado"></span>
         <button id="logoutBtn">Sair</button>
-      </header>
+      </div>
       <div class="novo-chat">
-        <input type="text" id="novoContato" placeholder="Usuário ou Telefone" />
+        <input type="text" id="novoContato" placeholder="Usuário ou Telefone">
         <button id="addContatoBtn">Adicionar</button>
       </div>
       <ul id="listaContatos"></ul>
-    </aside>
+    </div>
 
-    <!-- Chat principal -->
-    <main class="chat-box">
-      <header class="chat-header">
+    <!-- Chat Box -->
+    <div class="chat-box">
+      <header>
         <h3 id="chatCom">Selecione um contato</h3>
-        <div class="header-right">
-          <span id="statusPresenca" class="presence offline">OFF</span>
-          <button id="salvarContatoBtn">Salvar contato</button>
-        </div>
       </header>
       <div id="mensagens" class="messages"></div>
       <form id="formMensagem" class="chat-input">
-        <input type="text" id="mensagemInput" placeholder="Digite sua mensagem" />
+        <input type="text" id="mensagemInput" placeholder="Digite sua mensagem">
         <button type="submit">Enviar</button>
       </form>
-    </main>
+    </div>
   </div>
+
+  <!-- Som de notificação -->
   <audio id="notifySound" src="notify.mp3" preload="auto"></audio>
-  <script type="module" src="./app.js"></script>
+
+  <!-- Importa JS -->
+  <script type="module" src="app.js"></script>
 </body>
 </html>
